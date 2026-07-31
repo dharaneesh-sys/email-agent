@@ -175,7 +175,7 @@ app.get('/api/emails', zValidator('query', z.object({
         // Check labels
         const labelIds = email.labelIds || [];
         const isUnread = labelIds.includes('UNREAD');
-        const isImportant = importance.isImportant || (importantOnly && importance.score > 0);
+        const isImportant = importance.isImportant || labelIds.includes('IMPORTANT') || (importantOnly && importance.score > 0);
 
         emailLikes.push({ id: email.id, from, to, subject, snippet: email.snippet, date, isImportant });
 
