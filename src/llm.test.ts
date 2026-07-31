@@ -6,7 +6,7 @@
 
 process.env['MODEL_ID'] = 'test-model'
 
-import { describe, expect, test } from 'bun:test'
+import { beforeAll, describe, expect, test } from 'bun:test'
 import type { EmailLike } from './llm'
 
 const {
@@ -19,6 +19,14 @@ const {
 } = await import('./llm')
 const { setFetchImpl } = await import('./nim')
 const { NIM_CONFIG } = await import('./config')
+
+// When the full suite runs, an earlier test file may already have evaluated
+// config.ts (caching modelEnvOverride with MODEL_ID unset), so the env
+// assignment above is not sufficient. Pin the override for deterministic
+// getActiveModel() behavior regardless of test-file execution order.
+beforeAll(() => {
+  Object.defineProperty(NIM_CONFIG, 'modelEnvOverride', { value: 'test-model', configurable: true })
+})
 
 // ─── Test helpers ────────────────────────────────────────────────────────────
 
