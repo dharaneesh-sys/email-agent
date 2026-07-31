@@ -525,7 +525,12 @@ app.post('/api/reply/draft', zValidator('json', z.object({
 // Serve the React SPA at the root. Built output lives in web/dist/.
 // Hashed assets are immutable by content-addressing; index.html is not hashed
 // so it must revalidate to discover new asset hashes.
-app.get('/', serveStatic({ root: './web/dist' }));
+app.get('/', serveStatic({
+  root: './web/dist',
+  onFound: (_path, c) => {
+    c.header('Cache-Control', 'no-cache');
+  },
+}));
 app.get(
   '/assets/*',
   serveStatic({
@@ -538,7 +543,12 @@ app.get(
 app.get('/favicon.ico', (c) => c.body(null, 204));
 
 // Legacy: keep dashboard.html reachable for reference/A-B during transition.
-app.get('/dashboard.html', serveStatic({ path: './dashboard.html' }));
+app.get('/dashboard.html', serveStatic({
+  path: './dashboard.html',
+  onFound: (_path, c) => {
+    c.header('Cache-Control', 'no-cache');
+  },
+}));
 
 // Serve static files (dashboard.html, CSS, JS, etc.)
 app.get('/*', serveStatic({ root: './' }));
