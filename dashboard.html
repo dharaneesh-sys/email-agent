@@ -12,27 +12,36 @@
         }
         
         :root {
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
+            /* Dark theme semantic tokens */
+            --bg: #0b1220;
+            --surface: #111a2c;
+            --surface-2: #182238;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border: #1e293b;
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
-            --dark: #1f2937;
-            --darker: #111827;
-            --light: #f9fafb;
-            --lighter: #e5e7eb;
-            --gray: #6b7280;
-            --gray-dark: #4b5563;
-            --border: #e5e7eb;
+            --accent: #8b5cf6;
+            /* Legacy aliases, dark-tuned so existing rules keep working */
+            --dark: #e2e8f0;      /* was near-black text; now light text on dark */
+            --darker: #f1f5f9;
+            --light: #111a2c;     /* was light bg; now dark surface */
+            --lighter: #182238;   /* was light hover bg; now dark hover surface */
+            --gray: #94a3b8;      /* was #6b7280; now muted text on dark */
+            --gray-dark: #7f8ea3;
             --radius: 8px;
-            --shadow: 0 2px 4px rgba(0,0,0,0.1);
+            --shadow: 0 2px 4px rgba(0,0,0,0.35);
             --transition: 0.2s ease;
         }
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: #f8fafc;
-            color: #1f2937;
+            background-color: var(--bg);
+            color: var(--text);
+            color-scheme: dark;
             line-height: 1.6;
         }
         
@@ -43,8 +52,9 @@
         }
         
         header {
-            background: white;
+            background: var(--surface);
             box-shadow: var(--shadow);
+            border: 1px solid var(--border);
             border-radius: var(--radius);
             padding: 1.5rem;
             margin-bottom: 1.5rem;
@@ -83,7 +93,7 @@
             display: flex;
             align-items: center;
             gap: 1rem;
-            background: var(--light);
+            background: var(--surface-2);
             padding: 0.75rem 1rem;
             border-radius: var(--radius);
             border: 1px solid var(--border);
@@ -91,12 +101,12 @@
         
         .auth-status.connected {
             border-color: var(--success);
-            background-color: #ecfdf5;
+            background-color: rgba(16, 185, 129, 0.12);
         }
         
         .auth-status.disconnected {
             border-color: var(--danger);
-            background-color: #fef2f2;
+            background-color: rgba(239, 68, 68, 0.12);
         }
         
         .auth-btn {
@@ -115,7 +125,7 @@
         }
         
         .auth-btn:disabled {
-            background: #9ca3af;
+            background: #334155;
             cursor: not-allowed;
         }
         
@@ -133,6 +143,12 @@
             border: 1px solid var(--border);
             border-radius: var(--radius);
             font-size: 0.9rem;
+            background: var(--surface-2);
+            color: var(--text);
+        }
+        
+        .search-box::placeholder {
+            color: var(--text-muted);
         }
         
         .filter-btn, .action-btn {
@@ -149,9 +165,9 @@
         }
         
         .filter-btn {
-            background: white;
+            background: var(--surface);
             border: 1px solid var(--border);
-            color: var(--gray-dark);
+            color: var(--text-muted);
         }
         
         .filter-btn:hover {
@@ -174,16 +190,17 @@
         }
         
         .action-btn.secondary {
-            background: var(--gray);
-            color: white;
+            background: var(--surface-2);
+            color: var(--text);
+            border: 1px solid var(--border);
         }
         
         .action-btn.secondary:hover {
-            background: var(--gray-dark);
+            background: var(--border);
         }
         
         .email-list {
-            background: white;
+            background: var(--surface);
             border-radius: var(--radius);
             box-shadow: var(--shadow);
             overflow: hidden;
@@ -204,7 +221,7 @@
         }
         
         .email-item.unread {
-            background: #f0f9ff;
+            background: rgba(59, 130, 246, 0.08);
             border-left: 3px solid var(--primary);
         }
         
@@ -276,27 +293,27 @@
         }
         
         .tag.importance {
-            background: #fef3c7;
-            color: #92400e;
-            border: 1px solid #fbbf24;
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.4);
         }
         
         .tag.unread {
-            background: #dbeafe;
-            color: #1e40af;
-            border: 1px solid #bfdbfe;
+            background: rgba(59, 130, 246, 0.15);
+            color: #93c5fd;
+            border: 1px solid rgba(59, 130, 246, 0.4);
         }
         
         .tag.starred {
-            background: #fed7aa;
-            color: #9a3412;
-            border: 1px solid #fdba74;
+            background: rgba(251, 146, 60, 0.15);
+            color: #fdba74;
+            border: 1px solid rgba(251, 146, 60, 0.4);
         }
         
         .tag.label {
-            background: #e0e7ff;
-            color: #3730a3;
-            border: 1px solid #c7d2fe;
+            background: rgba(129, 140, 248, 0.15);
+            color: #a5b4fc;
+            border: 1px solid rgba(129, 140, 248, 0.4);
         }
         
         .email-actions {
@@ -355,20 +372,21 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(2, 6, 23, 0.75);
             z-index: 1000;
             align-items: center;
             justify-content: center;
         }
         
         .modal-content {
-            background: white;
+            background: var(--surface);
+            border: 1px solid var(--border);
             border-radius: var(--radius);
             width: 90%;
             max-width: 500px;
             max-height: 80vh;
             overflow-y: auto;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
         }
         
         .modal-header {
@@ -453,11 +471,12 @@
             position: fixed;
             bottom: 2rem;
             right: 2rem;
-            background: var(--dark);
-            color: white;
+            background: var(--surface-2);
+            color: var(--text);
+            border: 1px solid var(--border);
             padding: 1rem 1.5rem;
             border-radius: var(--radius);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
             z-index: 1000;
             display: none;
             animation: slideIn 0.3s ease;
@@ -482,6 +501,384 @@
             }
         }
         
+        /* ============ New component styles (dark theme additions) ============ */
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .model-badge {
+            display: none; /* shown by JS when /api/config reports a model */
+            font-size: 0.75rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            background: var(--surface-2);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            white-space: nowrap;
+            letter-spacing: 0.01em;
+        }
+
+        .layout-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        .detail-pane {
+            display: none; /* shown once an email is selected */
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .detail-meta {
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1rem;
+        }
+
+        .detail-subject {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+
+        .detail-from,
+        .detail-date {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .detail-body {
+            color: var(--text);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin-bottom: 1rem;
+        }
+
+        .importance-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .detail-muted {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-style: italic;
+        }
+
+        .summary-panel {
+            margin-top: 0.5rem;
+            padding: 1rem;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+        }
+
+        .summary-panel h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .summary-text {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+
+        .summary-unavailable {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-style: italic;
+        }
+
+        .key-points {
+            margin: 0.75rem 0 0;
+            padding-left: 1.25rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .key-points li {
+            margin-bottom: 0.35rem;
+        }
+
+        .summary-loading {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin: 0.75rem 0 0.25rem;
+        }
+
+        .summary-loading .skeleton {
+            height: 14px;
+            width: 100%;
+        }
+
+        .summary-loading .skeleton:nth-child(2) { width: 85%; }
+        .summary-loading .skeleton:nth-child(3) { width: 60%; }
+
+        .suggested-action {
+            margin-top: 0.75rem;
+            padding: 0.5rem 0.75rem;
+            background: rgba(16, 185, 129, 0.1);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 6px;
+            font-size: 0.85rem;
+            line-height: 1.45;
+        }
+
+        .smart-reply-block {
+            margin-top: 1.5rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .smart-reply-block h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.75rem;
+        }
+
+        .tone-select {
+            width: 100%;
+            padding: 0.6rem 0.75rem;
+            background: var(--surface-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 0.9rem;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .tone-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+        }
+
+        .draft-reply-btn {
+            width: 100%;
+            margin-top: 0.75rem;
+        }
+
+        .score-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            cursor: help;
+        }
+
+        .score-chip.mid {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border-color: rgba(245, 158, 11, 0.35);
+        }
+
+        .score-chip.low {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border-color: rgba(239, 68, 68, 0.35);
+        }
+
+        .llm-badge {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            padding: 0.15rem 0.55rem;
+            border-radius: 999px;
+            background: rgba(139, 92, 246, 0.15);
+            color: #c4b5fd;
+            border: 1px solid rgba(139, 92, 246, 0.35);
+            cursor: help;
+        }
+
+        .llm-badge:hover::after,
+        .reason-tooltip:hover::after {
+            content: attr(data-reason);
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 0;
+            z-index: 60;
+            width: max-content;
+            max-width: 280px;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            background: var(--surface-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+            font-size: 0.75rem;
+            font-weight: 400;
+            line-height: 1.45;
+            white-space: normal;
+            letter-spacing: normal;
+            pointer-events: none;
+        }
+
+        .reason-tooltip {
+            position: relative;
+            cursor: help;
+        }
+
+        /* Active email row highlight — rule was toggled at ~L1030 but never styled */
+        .email-item.selected {
+            background: rgba(59, 130, 246, 0.14);
+            box-shadow: inset 3px 0 0 var(--primary);
+        }
+
+        .email-item.analyzing .email-content {
+            animation: analyzePulse 1.2s ease-in-out infinite;
+        }
+
+        @keyframes analyzePulse {
+            0%, 100% { opacity: 0.45; }
+            50% { opacity: 0.9; }
+        }
+
+        /* Skeleton shimmer */
+        @keyframes shimmer {
+            0% { background-position: -400px 0; }
+            100% { background-position: 400px 0; }
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, var(--surface-2) 25%, #24304a 37%, var(--surface-2) 63%);
+            background-size: 800px 100%;
+            animation: shimmer 1.4s ease infinite;
+            border-radius: 4px;
+        }
+
+        .skeleton-row {
+            height: 64px;
+            margin-bottom: 0.75rem;
+            border-radius: var(--radius);
+            background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 37%, var(--surface) 63%);
+            background-size: 800px 100%;
+            animation: shimmer 1.4s ease infinite;
+        }
+
+        .skeleton-row:last-child {
+            margin-bottom: 0;
+        }
+
+        #loadingState {
+            padding: 1rem;
+            text-align: left;
+        }
+
+        /* Dark-tuned form controls used by the reply modal */
+        .form-label {
+            display: block;
+            margin-bottom: 0.35rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.6rem 0.75rem;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            font-size: 0.9rem;
+            font-family: inherit;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .form-check {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-check-input {
+            accent-color: var(--primary);
+        }
+
+        .mb-3 {
+            margin-bottom: 1rem;
+        }
+
+        .text-sm {
+            font-size: 0.875rem;
+        }
+
+        .text-gray-500 {
+            color: var(--text-muted);
+        }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border);
+            background: var(--surface-2);
+            border-radius: 0 0 var(--radius) var(--radius);
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--surface-2);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--border);
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 0.5rem;
@@ -515,6 +912,20 @@
                 margin-top: 1rem;
                 width: 100%;
             }
+
+            .layout-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header-actions {
+                flex-direction: column;
+                align-items: flex-start;
+                width: 100%;
+            }
+
+            .detail-pane {
+                max-height: none;
+            }
         }
     </style>
 </head>
@@ -525,9 +936,12 @@
                 <h1>Email Agent</h1>
                 <p class="text-sm text-gray-500">Smart inbox with AI-powered prioritization</p>
             </div>
-            <div class="auth-status" id="authStatus">
-                <div>Status: <span id="authStatusText">Checking...</span></div>
-                <button class="auth-btn" id="authBtn">Connect Account</button>
+            <div class="header-actions">
+                <span class="model-badge" id="modelBadge">AI off</span>
+                <div class="auth-status" id="authStatus">
+                    <div>Status: <span id="authStatusText">Checking...</span></div>
+                    <button class="auth-btn" id="authBtn">Connect Account</button>
+                </div>
             </div>
         </header>
         
@@ -553,17 +967,58 @@
             <button class="filter-btn" id="filterImportant">Important</button>
             <button class="filter-btn" id="filterStarred">Starred</button>
             <button class="action-btn" id="refreshBtn">🔄 Refresh</button>
+            <button class="action-btn" id="refreshImportanceBtn">✨ Analyze</button>
         </div>
         
-        <div class="email-list" id="emailList">
-            <div class="loading" id="loadingState">
-                <div>Loading emails...</div>
+        <div class="layout-grid">
+            <div class="email-list" id="emailList">
+                <div class="loading" id="loadingState">
+                    <div class="skeleton-row"></div>
+                    <div class="skeleton-row"></div>
+                    <div class="skeleton-row"></div>
+                    <div class="skeleton-row"></div>
+                    <div class="skeleton-row"></div>
+                </div>
+                <div class="empty-state" id="emptyState" style="display: none;">
+                    <div class="empty-state-icon">📭</div>
+                    <p>No emails found</p>
+                    <p>Try adjusting your filters or check your connection.</p>
+                </div>
             </div>
-            <div class="empty-state" id="emptyState" style="display: none;">
-                <div class="empty-state-icon">📭</div>
-                <p>No emails found</p>
-                <p>Try adjusting your filters or check your connection.</p>
-            </div>
+
+            <aside class="detail-pane" id="detailPane">
+                <div class="detail-meta" id="detailMeta">
+                    <div class="detail-subject" id="detailSubject">Select an email to view details</div>
+                    <div class="detail-from" id="detailFrom"></div>
+                    <div class="detail-date" id="detailDate"></div>
+                </div>
+                <div class="importance-row" id="detailImportance"></div>
+                <div class="detail-body" id="detailBody"></div>
+
+                <section class="summary-panel" id="summaryPanel">
+                    <h3><span class="llm-badge" data-reason="Generated by the local AI model">AI</span> Summary</h3>
+                    <div class="summary-loading" id="summaryLoading">
+                        <div class="skeleton"></div>
+                        <div class="skeleton"></div>
+                        <div class="skeleton"></div>
+                    </div>
+                    <div class="summary-text" id="summaryText"></div>
+                    <ul class="key-points" id="keyPointsList"></ul>
+                    <div id="suggestedAction"></div>
+                </section>
+
+                <div class="smart-reply-block">
+                    <h3>Smart Reply</h3>
+                    <label class="form-label" for="toneSelect">Tone</label>
+                    <select id="toneSelect" class="tone-select">
+                        <option value="professional">Professional</option>
+                        <option value="friendly">Friendly</option>
+                        <option value="concise">Concise</option>
+                        <option value="formal">Formal</option>
+                    </select>
+                    <button class="btn btn-primary draft-reply-btn" id="draftReplyBtn">✨ Draft Reply</button>
+                </div>
+            </aside>
         </div>
     </div>
 
@@ -617,6 +1072,7 @@
         let currentFilter = 'all';
         let searchQuery = '';
         let selectedEmailId = null;
+        let importanceInitialized = false; // auto-run AI scoring once per session
 
         // DOM Elements
         const authStatus = document.getElementById('authStatus');
@@ -649,6 +1105,21 @@
         const replyAllCheckbox = document.getElementById('replyAll');
         const toast = document.getElementById('toast');
 
+        // New UI refs (surgical additions)
+        const modelBadge = document.getElementById('modelBadge');
+        const detailPane = document.getElementById('detailPane');
+        const toneSelect = document.getElementById('toneSelect');
+        const draftReplyBtn = document.getElementById('draftReplyBtn');
+        const refreshImportanceBtn = document.getElementById('refreshImportanceBtn');
+        const detailSubject = document.getElementById('detailSubject');
+        const detailFrom = document.getElementById('detailFrom');
+        const detailDate = document.getElementById('detailDate');
+        const detailBody = document.getElementById('detailBody');
+        const summaryLoading = document.getElementById('summaryLoading');
+        const summaryText = document.getElementById('summaryText');
+        const keyPointsList = document.getElementById('keyPointsList');
+        const suggestedAction = document.getElementById('suggestedAction');
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             // Check URL params for auth result
@@ -661,10 +1132,15 @@
                 showToast('Authentication failed: ' + (params.get('reason') || 'Unknown error'), 'error');
                 window.history.replaceState({}, '', window.location.pathname);
             }
-            initAuth();
-            loadStats();
-            loadEmails();
+            // initAuth() is async — gate email loading on it so the account is
+            // resolved first (pre-existing race: loadEmails() saw a null account
+            // and showed "Please connect" on every first load).
+            initAuth().then(() => {
+                loadStats();
+                loadEmails();
+            });
             setupEventListeners();
+            loadConfig();
             
             // Auto-refresh every 2 minutes
             setInterval(() => {
@@ -755,6 +1231,83 @@
             }
         }
 
+        // AI config / model badge
+        async function loadConfig() {
+            if (!modelBadge) return;
+            try {
+                const response = await fetch(`${API_BASE}/config`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                const model = data.model || data.defaultModel;
+                if (model) {
+                    modelBadge.textContent = shortenModelName(model);
+                    modelBadge.style.display = 'inline-flex';
+                }
+            } catch (error) {
+                // Endpoint absent / 404 / network error — keep the badge hidden, degrade silently
+                console.debug('AI config endpoint unavailable:', error);
+            }
+        }
+
+        function shortenModelName(model) {
+            if (!model) return 'AI';
+            let name = String(model).split('/').pop() || String(model);
+            return name.replace(/-(instruct|chat|latest|it|q4[_k0-9]+|gguf|fp16|bf16|8bit|4bit)$/i, '');
+        }
+
+        // AI importance scoring (degrades gracefully when the endpoint is absent)
+        async function refreshImportance(isAuto) {
+            if (!emails.length || !currentAccount) {
+                showToast('No emails to analyze', 'error');
+                return;
+            }
+            const visibleIds = (filteredEmails.length ? filteredEmails : emails).map(e => e.id);
+            const rows = emailList.querySelectorAll('.email-item');
+            rows.forEach(r => r.classList.add('analyzing'));
+            if (refreshImportanceBtn) {
+                refreshImportanceBtn.disabled = true;
+                refreshImportanceBtn.textContent = '⏳ Analyzing...';
+            }
+            try {
+                const response = await fetch(`${API_BASE}/importance/refresh`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: visibleIds, accountId: currentAccount })
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                const scores = data.scores || [];
+                scores.forEach(s => {
+                    const email = emails.find(e => e.id === s.emailId);
+                    if (!email) return;
+                    if (typeof s.llmScore === 'number') email.llmScore = s.llmScore;
+                    if (s.reason) email.llmReason = s.reason;
+                    if (typeof s.isImportant === 'boolean') email.isImportant = s.isImportant;
+                    // Targeted in-place DOM update — no full list rebuild
+                    const rowEl = findEmailRow(s.emailId);
+                    if (rowEl) updateEmailRowImportance(email, rowEl);
+                });
+                if (data.model && modelBadge) {
+                    modelBadge.textContent = shortenModelName(data.model);
+                    modelBadge.style.display = 'inline-flex';
+                }
+                if (selectedEmailId) {
+                    const sel = emails.find(e => e.id === selectedEmailId);
+                    if (sel) renderDetailImportance(sel);
+                }
+                showToast(scores.length ? `Analyzed ${scores.length} emails` : 'Importance analysis completed', 'success');
+            } catch (error) {
+                console.debug('Importance refresh unavailable:', error);
+                if (!isAuto) showToast('AI analysis failed', 'error');
+            } finally {
+                rows.forEach(r => r.classList.remove('analyzing'));
+                if (refreshImportanceBtn) {
+                    refreshImportanceBtn.disabled = false;
+                    refreshImportanceBtn.textContent = '✨ Analyze';
+                }
+            }
+        }
+
         // Stats
         async function loadStats() {
             try {
@@ -791,6 +1344,12 @@
                 emails = data.emails || [];
                 applyFilters();
                 renderEmailList();
+
+                // Auto-run AI importance scoring once after the first successful load
+                if (!importanceInitialized && filteredEmails.length) {
+                    importanceInitialized = true;
+                    refreshImportance(true);
+                }
                 
             } catch (error) {
                 console.error('Failed to load emails:', error);
@@ -840,6 +1399,13 @@
             });
             
             emailList.appendChild(fragment);
+            
+            // Re-apply the selected-row highlight after a rebuild
+            if (selectedEmailId) {
+                emailList.querySelectorAll('.email-item').forEach(el => {
+                    el.classList.toggle('selected', el.dataset.emailId === selectedEmailId);
+                });
+            }
             hideLoading();
         }
 
@@ -886,6 +1452,25 @@
                     </div>
                 </div>
             `;
+            
+            // AI importance chip + reason tooltip (appended after the template —
+            // leaves the nested template literal ~L867 untouched)
+            if (typeof email.llmScore === 'number') {
+                const tags = div.querySelector('.email-tags');
+                if (tags) {
+                    const chip = document.createElement('span');
+                    chip.className = 'score-chip' + (email.llmScore >= 70 ? '' : email.llmScore >= 40 ? ' mid' : ' low');
+                    chip.textContent = Math.round(email.llmScore);
+                    tags.appendChild(chip);
+                    if (email.llmReason) {
+                        const badge = document.createElement('span');
+                        badge.className = 'llm-badge';
+                        badge.dataset.reason = email.llmReason;
+                        badge.textContent = 'AI';
+                        tags.appendChild(badge);
+                    }
+                }
+            }
             
             // Add event listeners
             const checkbox = div.querySelector('.email-checkbox');
@@ -994,6 +1579,14 @@
                 });
             });
             
+            // Smart reply + AI importance analysis
+            if (draftReplyBtn) {
+                draftReplyBtn.addEventListener('click', draftReply);
+            }
+            if (refreshImportanceBtn) {
+                refreshImportanceBtn.addEventListener('click', refreshImportance);
+            }
+            
             // Reply modal
             replyClose.addEventListener('click', () => {
                 replyModal.style.display = 'none';
@@ -1021,17 +1614,175 @@
         }
 
         // Email detail view
-        function showEmailDetail(email) {
+        async function renderDetail(email) {
             selectedEmailId = email.id;
-            
-            // In a full implementation, we'd show a detailed view
-            // For now, we'll just highlight the selected email
+
+            // Highlight selected email row
             document.querySelectorAll('.email-item').forEach(el => {
                 el.classList.toggle('selected', el.dataset.emailId === email.id);
             });
-            
-            // Show reply button in header or something
-            // For MVP, we'll just enable the reply action
+
+            if (!detailPane) return;
+            detailPane.style.display = 'block';
+
+            // Optimistic fill from list data
+            populateDetailMeta(email);
+            renderDetailImportance(email);
+            detailBody.textContent = email.snippet || '';
+
+            // Fetch fresh email data (may include optional llmScore / llmReason)
+            try {
+                const response = await fetch(`${API_BASE}/email/${encodeURIComponent(email.id)}?account=${encodeURIComponent(currentAccount || '')}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const fresh = data.email || data;
+                    if (fresh && typeof fresh === 'object') {
+                        populateDetailMeta(fresh);
+                        if (typeof fresh.llmScore === 'number') {
+                            email.llmScore = fresh.llmScore;
+                            email.llmReason = fresh.llmReason || email.llmReason;
+                        }
+                        renderDetailImportance(email);
+                        if (fresh.body) {
+                            if (/<[a-z][\s\S]*>/i.test(fresh.body)) {
+                                detailBody.innerHTML = fresh.body;
+                            } else {
+                                detailBody.textContent = fresh.body;
+                            }
+                        }
+                        // Sync the row badge if the fresh payload added a score
+                        const rowEl = findEmailRow(email.id);
+                        if (rowEl) updateEmailRowImportance(email, rowEl);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load email detail:', error);
+            }
+
+            // Fetch AI summary (degrades gracefully when the endpoint is absent)
+            try {
+                const response = await fetch(`${API_BASE}/summary/${encodeURIComponent(email.id)}`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                renderSummary(data);
+            } catch (error) {
+                console.debug('Summary endpoint unavailable:', error);
+                renderSummaryUnavailable();
+            }
+        }
+
+        // Backwards-compatible entry point (kept so the existing click handler works)
+        function showEmailDetail(email) {
+            renderDetail(email);
+        }
+
+        function populateDetailMeta(data) {
+            if (!data) return;
+            detailSubject.textContent = data.subject || '(No subject)';
+            detailFrom.textContent = data.from ? 'From: ' + data.from : '';
+            detailDate.textContent = data.date ? formatDate(new Date(data.date)) : '';
+        }
+
+        function renderDetailImportance(email) {
+            const row = document.getElementById('detailImportance');
+            if (!row) return;
+            row.innerHTML = '';
+            const frag = document.createDocumentFragment();
+
+            if (email.isImportant) {
+                const chip = document.createElement('span');
+                chip.className = 'tag importance';
+                chip.textContent = '⚡ Important';
+                frag.appendChild(chip);
+            }
+            if (typeof email.llmScore === 'number') {
+                const chip = document.createElement('span');
+                chip.className = 'score-chip' + (email.llmScore >= 70 ? '' : email.llmScore >= 40 ? ' mid' : ' low');
+                chip.textContent = 'AI ' + Math.round(email.llmScore);
+                if (email.llmReason) {
+                    chip.classList.add('reason-tooltip');
+                    chip.dataset.reason = email.llmReason;
+                }
+                frag.appendChild(chip);
+            }
+            if (!email.isImportant && typeof email.llmScore !== 'number') {
+                const muted = document.createElement('span');
+                muted.className = 'detail-muted';
+                muted.textContent = 'No AI assessment yet';
+                frag.appendChild(muted);
+            }
+            row.appendChild(frag);
+        }
+
+        function renderSummary(data) {
+            summaryLoading.style.display = 'none';
+            summaryText.className = 'summary-text';
+            summaryText.textContent = (data && data.summary) || 'No summary available.';
+            keyPointsList.innerHTML = '';
+            ((data && data.keyPoints) || []).forEach(point => {
+                const li = document.createElement('li');
+                li.textContent = point;
+                keyPointsList.appendChild(li);
+            });
+            suggestedAction.innerHTML = '';
+            if (data && data.suggestedAction) {
+                const chip = document.createElement('div');
+                chip.className = 'suggested-action';
+                chip.textContent = '💡 Suggested: ' + data.suggestedAction;
+                suggestedAction.appendChild(chip);
+            }
+        }
+
+        function renderSummaryUnavailable() {
+            summaryLoading.style.display = 'none';
+            summaryText.className = 'summary-unavailable';
+            summaryText.textContent = 'Summary unavailable';
+            keyPointsList.innerHTML = '';
+            suggestedAction.innerHTML = '';
+        }
+
+        function findEmailRow(emailId) {
+            const rows = emailList.querySelectorAll('.email-item');
+            for (const row of rows) {
+                if (row.dataset.emailId === emailId) return row;
+            }
+            return null;
+        }
+
+        function updateEmailRowImportance(email, rowEl) {
+            if (!rowEl) return;
+            const tags = rowEl.querySelector('.email-tags');
+            if (!tags) return;
+
+            // Remove stale AI chips
+            tags.querySelectorAll('.score-chip, .llm-badge').forEach(el => el.remove());
+
+            // Keep the importance tag in sync
+            const impTag = tags.querySelector('.tag.importance');
+            if (email.isImportant && !impTag) {
+                const chip = document.createElement('span');
+                chip.className = 'tag importance';
+                chip.textContent = '⚡ Important';
+                tags.insertBefore(chip, tags.firstChild);
+            } else if (!email.isImportant && impTag) {
+                impTag.remove();
+            }
+            rowEl.classList.toggle('important', !!email.isImportant);
+
+            // Add AI score chip + reason tooltip when the LLM has scored this email
+            if (typeof email.llmScore === 'number') {
+                const chip = document.createElement('span');
+                chip.className = 'score-chip' + (email.llmScore >= 70 ? '' : email.llmScore >= 40 ? ' mid' : ' low');
+                chip.textContent = Math.round(email.llmScore);
+                tags.appendChild(chip);
+                if (email.llmReason) {
+                    const badge = document.createElement('span');
+                    badge.className = 'llm-badge';
+                    badge.dataset.reason = email.llmReason;
+                    badge.textContent = 'AI';
+                    tags.appendChild(badge);
+                }
+            }
         }
 
         function replyToEmail(emailId) {
@@ -1098,11 +1849,57 @@
             }
         }
 
+        // Smart-reply draft via LLM (degrades gracefully when the endpoint is absent)
+        async function draftReply() {
+            if (!selectedEmailId) {
+                showToast('Select an email first', 'error');
+                return;
+            }
+            const email = emails.find(e => e.id === selectedEmailId);
+            if (!email) {
+                showToast('Email no longer in the list', 'error');
+                return;
+            }
+            const tone = toneSelect ? toneSelect.value : 'professional';
+            draftReplyBtn.disabled = true;
+            draftReplyBtn.textContent = '⏳ Drafting...';
+            try {
+                const response = await fetch(`${API_BASE}/reply/draft`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messageId: selectedEmailId, tone, accountId: currentAccount })
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                if (!data.reply) {
+                    showToast('Could not generate a draft', 'error');
+                    return;
+                }
+                // Prefill the existing reply modal for review before sending
+                replyTo.value = extractEmailAddress(email.from);
+                replySubject.value = `Re: ${email.subject.startsWith('Re: ') ? email.subject : 'Re: ' + email.subject}`;
+                replyBody.value = data.reply;
+                replyAllCheckbox.checked = false;
+                replyModal.style.display = 'flex';
+                setTimeout(() => replyBody.focus(), 100);
+                showToast('Draft ready for review', 'success');
+            } catch (error) {
+                console.error('Draft failed:', error);
+                showToast('Failed to draft reply', 'error');
+            } finally {
+                draftReplyBtn.disabled = false;
+                draftReplyBtn.textContent = '✨ Draft Reply';
+            }
+        }
+
         // UI Helpers
         function showLoading() {
             loadingState.style.display = 'block';
-            emailList.style.display = 'none';
+            emailList.style.display = 'block';
             emptyState.style.display = 'none';
+            // Re-attach skeleton/empty state if renderEmailList detached them
+            if (!loadingState.isConnected) emailList.appendChild(loadingState);
+            if (!emptyState.isConnected) emailList.appendChild(emptyState);
         }
         
         function hideLoading() {
