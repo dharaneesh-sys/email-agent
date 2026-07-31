@@ -105,7 +105,7 @@ class AuthManager {
   }
 
   /**
-   * Check if we have a valid token for an account
+   * Check if we have a valid (non-expired) token for an account
    */
   hasValidToken(accountId: string): boolean {
     const token = this.tokens.get(accountId);
@@ -114,6 +114,14 @@ class AuthManager {
     // Check if token is expired (with 5 minute buffer)
     const expiresIn = (token.expiry_date - Date.now()) / 1000;
     return expiresIn > 300; // 5 minutes
+  }
+
+  /**
+   * Check if we have any stored token for an account (expired or not).
+   * Expired tokens can be auto-refreshed — no re-auth needed.
+   */
+  isConnected(accountId: string): boolean {
+    return this.tokens.has(accountId);
   }
 
   /**
@@ -217,11 +225,12 @@ class AuthManager {
   }
 
   /**
-   * Get list of accounts that need authentication
+   * Get list of accounts that have never been authenticated (no stored token).
+   * Expired tokens are auto-refreshed — they are NOT needing auth.
    */
   getAccountsNeedingAuth(): string[] {
     return EMAIL_ACCOUNTS
-      .filter(acc => !this.hasValidToken(acc.id))
+      .filter(acc => !this.isConnected(acc.id))
       .map(acc => acc.id);
   }
 }

@@ -73,7 +73,7 @@ app.get('/api/auth/status', async (c) => {
     EMAIL_ACCOUNTS.map(async (acc) => ({
       id: acc.id,
       email: acc.email,
-      authenticated: authManager.hasValidToken(acc.id),
+      authenticated: authManager.isConnected(acc.id),
       needsAuth: authManager.getAccountsNeedingAuth().includes(acc.id),
     }))
   );
