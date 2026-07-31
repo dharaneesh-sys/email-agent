@@ -2,6 +2,7 @@
 // Reuses Google OAuth credentials from ClutchD-Backend where available
 
 import { z } from 'zod';
+import { join } from 'node:path'
 
 // Load environment variables
 const CLIENT_ID = process.env['GOOGLE_OAUTH_CLIENT_ID'] || '710446274779-8kn2hpj6bl7014gv19a63lipnehdedun.apps.googleusercontent.com';
@@ -44,6 +45,66 @@ for (const acc of EMAIL_ACCOUNTS) {
   if (acc.email === 'your-personal@gmail.com' || acc.email === 'your-work@gmail.com') {
     console.warn(`⚠️  ${acc.id} email is still set to placeholder "${acc.email}". Set ${acc.id === 'personal' ? 'EMAIL_PERSONAL' : 'EMAIL_WORK'} in .env to your real Gmail address.`);
   }
+}
+
+// ─── NVIDIA NIM configuration ────────────────────────────────────────────────
+// Extracts a working NVIDIA NIM API key from the environment without ever
+// logging the key value. Precedence: NVIDIA_NIM_API_KEY, then the first
+// `nvapi-` string found in OPENCODE_FAILOVER_KEYS (JSON walk, regex fallback).
+export function extractNimApiKey(env: Record<string, string | undefined> = process.env): string | null {
+  const explicit = env['NVIDIA_NIM_API_KEY']?.trim()
+  if (explicit) return explicit
+
+  const raw = env['OPENCODE_FAILOVER_KEYS']?.trim()
+  if (raw) {
+    try {
+      const parsed: unknown = JSON.parse(raw)
+      if (isRecord(parsed)) {
+        const fromJson = walkNvapiValues(parsed)
+        if (fromJson) return fromJson
+      }
+    } catch {
+      // Malformed JSON — fall through to the regex fallback below.
+    }
+    const match = raw.match(/(?:^|["[\s,])(nvapi-[A-Za-z0-9_-]+)/)
+    const key = match?.[1]
+    if (key) return key
+  }
+  return null
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+// Walks object values in document order, preferring array elements (the
+// typical OPENCODE_FAILOVER_KEYS shape: profile -> array of keys).
+function walkNvapiValues(value: Record<string, unknown>): string | null {
+  for (const nested of Object.values(value)) {
+    if (typeof nested === 'string') {
+      if (nested.startsWith('nvapi-')) return nested
+    } else if (Array.isArray(nested)) {
+      for (const item of nested) {
+        if (typeof item === 'string' && item.startsWith('nvapi-')) return item
+      }
+    } else if (isRecord(nested)) {
+      const found = walkNvapiValues(nested)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+export const NIM_CONFIG = {
+  baseUrl: process.env['NIM_BASE_URL'] || 'https://integrate.api.nvidia.com/v1',
+  apiKey: extractNimApiKey(),
+  defaultModel: process.env['NIM_DEFAULT_MODEL'] || 'meta/llama-3.1-70b-instruct',
+  modelEnvOverride: process.env['MODEL_ID']?.trim() || null,
+  generatedModelPath: join(process.cwd(), 'src', 'generated-model.json'),
+  timeoutMs: Number(process.env['NIM_TIMEOUT_MS'] ?? 90000),
+  maxRetries: Number(process.env['NIM_MAX_RETRIES'] ?? 2),
+  maxOutputTokens: { importance: 128, summary: 512, reply: 1024 },
+  importance: { batchSize: 5, maxPerSync: 25, threshold: 60, concurrency: 2 },
 }
 
 // Importance scoring rules
