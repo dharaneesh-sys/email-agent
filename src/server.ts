@@ -10,6 +10,9 @@ import { EMAIL_ACCOUNTS } from './config';
 import { authManager } from './auth';
 import { gmailService } from './gmail';
 import { importanceScorer } from './importance';
+import { llmService } from './llm';
+import type { Email } from './gmail';
+import type { EmailLike, LlmImportanceResult } from './llm';
 import type { EmailListItem } from './types';
 
 // Create Hono app
@@ -18,7 +21,7 @@ const app = new Hono();
 // Middleware to ensure account is authenticated (except auth endpoints)
 app.use('/api/*', async (c, next) => {
   const path = c.req.path;
-  if (path.startsWith('/api/auth') || path.startsWith('/api/oauth2callback') || path.startsWith('/api/health')) {
+  if (path.startsWith('/api/auth') || path.startsWith('/api/oauth2callback') || path.startsWith('/api/health') || path.startsWith('/api/config')) {
     await next();
     return;
   }
@@ -29,9 +32,35 @@ app.use('/api/*', async (c, next) => {
   await next();
 });
 
+// Shared EmailLike conversion for the single-email, refresh, summary and draft routes.
+function toEmailLike(email: Email): EmailLike {
+  const headers = Object.fromEntries(
+    email.payload.headers.map((h) => [h.name.toLowerCase(), h.value])
+  )
+  return {
+    id: email.id,
+    from: headers['from'] || 'Unknown',
+    to: headers['to'] || '',
+    subject: headers['subject'] || '(No Subject)',
+    snippet: email.snippet,
+    date: new Date(parseInt(email.internalDate, 10)).toISOString(),
+  }
+}
+
 // Health check endpoint
 app.get('/api/health', (c) => {
   return c.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Public LLM config for the dashboard (no auth — exposes no account data)
+app.get('/api/config', (c) => {
+  const info = llmService.getActiveModelInfo()
+  return c.json({
+    model: info.model,
+    llmEnabled: info.llmEnabled,
+    defaultModel: info.defaultModel,
+    defaultAccount: EMAIL_ACCOUNTS[0].id,
+  })
 });
 
 // Get authentication status for all accounts
@@ -84,21 +113,26 @@ app.get('/api/oauth2callback', zValidator('query', z.object({
 
 // Get emails for an account with optional filtering
 app.get('/api/emails', zValidator('query', z.object({
+  account: z.string().optional(),
   accountId: z.string().optional(),
   query: z.string().optional(),
   maxResults: z.coerce.number().int().min(1).max(100).optional(),
   importantOnly: z.coerce.boolean().optional(),
   unreadOnly: z.coerce.boolean().optional(),
 })), async (c) => {
-  const { 
-    accountId = EMAIL_ACCOUNTS[0].id, 
-    query, 
+  const {
+    account,
+    accountId = EMAIL_ACCOUNTS[0].id,
+    query,
     maxResults = 20,
     importantOnly = false,
-    unreadOnly = false
+    unreadOnly = false,
   } = c.req.valid('query');
+  // The dashboard sends `account`, not `accountId` — honor whichever is present.
+  const resolvedAccountId = account ?? accountId;
+  const accountEmail = EMAIL_ACCOUNTS.find((acc) => acc.id === resolvedAccountId)?.email ?? '';
 
-  if (!EMAIL_ACCOUNTS.some(acc => acc.id === accountId)) {
+  if (!EMAIL_ACCOUNTS.some(acc => acc.id === resolvedAccountId)) {
     throw new HTTPException(400, { message: 'Invalid account ID' });
   }
 
@@ -111,32 +145,35 @@ app.get('/api/emails', zValidator('query', z.object({
     // might not match our custom scoring
 
     // Get message IDs
-    const messageIds = await gmailService.listMessages(accountId, {
+    const messageIds = await gmailService.listMessages(resolvedAccountId, {
       query: gmailQuery,
       maxResults: Math.min(maxResults * 2, 100), // Get extra to account for filtering
     });
 
     // Fetch full messages
     const emails = await Promise.all(
-      messageIds.slice(0, maxResults).map(id => gmailService.getMessage(accountId, id))
+      messageIds.slice(0, maxResults).map(id => gmailService.getMessage(resolvedAccountId, id))
     );
 
     // Score importance and convert to UI format
+    const emailLikes: EmailLike[] = [];
     const emailItems: EmailListItem[] = await Promise.all(
       emails.map(async (email) => {
-        const importance = importanceScorer.scoreEmail(email, 
-          EMAIL_ACCOUNTS.find(acc => acc.id === accountId)!.email
-        );
+        const importance = importanceScorer.scoreEmail(email, accountEmail);
 
         // Extract headers
         const subject = email.payload.headers.find(h => h.name.toLowerCase() === 'subject')?.value || '(No Subject)';
         const from = email.payload.headers.find(h => h.name.toLowerCase() === 'from')?.value || 'Unknown';
+        const to = email.payload.headers.find(h => h.name.toLowerCase() === 'to')?.value || '';
         const dateTimestamp = parseInt(email.internalDate, 10);
         const date = new Date(dateTimestamp).toISOString();
 
         // Check labels
         const labelIds = email.labelIds || [];
         const isUnread = labelIds.includes('UNREAD');
+        const isImportant = importance.isImportant || (importantOnly && importance.score > 0);
+
+        emailLikes.push({ id: email.id, from, to, subject, snippet: email.snippet, date, isImportant });
 
         return {
           id: email.id,
@@ -146,12 +183,23 @@ app.get('/api/emails', zValidator('query', z.object({
           subject,
           date,
           importanceScore: importance.score,
-          isImportant: importance.isImportant || (importantOnly && importance.score > 0),
+          isImportant,
           labels: labelIds,
           isUnread,
         };
       })
     );
+
+    // Kick off LLM importance scoring (fire-and-forget) and attach cached results
+    llmService.enqueueImportance(emailLikes, accountEmail);
+    for (const item of emailItems) {
+      const imp = llmService.getImportance(item.id);
+      if (imp !== null) {
+        item.llmScore = imp.llmScore;
+        item.llmReason = imp.reason;
+        item.isImportant = item.isImportant || imp.isImportant;
+      }
+    }
 
     // Filter by importance if requested
     const filteredEmails = importantOnly 
@@ -161,7 +209,7 @@ app.get('/api/emails', zValidator('query', z.object({
     return c.json({ 
       emails: filteredEmails.slice(0, maxResults),
       count: filteredEmails.length,
-      accountId
+      accountId: resolvedAccountId
     });
   } catch (error) {
     console.error('Error fetching emails:', error);
@@ -177,34 +225,44 @@ app.get('/api/email/:id', async (c) => {
 
   try {
     const email = await gmailService.getMessage(accountId, id);
-    const importance = importanceScorer.scoreEmail(email, 
-      EMAIL_ACCOUNTS.find(acc => acc.id === accountId)!.email
-    );
+    const accountEmail = EMAIL_ACCOUNTS.find(acc => acc.id === accountId)?.email ?? '';
+    const importance = importanceScorer.scoreEmail(email, accountEmail);
 
     // Extract all headers for display
     const headers = Object.fromEntries(
       email.payload.headers.map(h => [h.name.toLowerCase(), h.value])
     );
 
-    return c.json({
-      email: {
-        id: email.id,
-        threadId: email.threadId,
+    // Await-scored LLM importance (cached or fresh); never throws, but guard anyway
+    let imp: LlmImportanceResult | null = null;
+    try {
+      const results = await llmService.ensureImportance([toEmailLike(email)], accountEmail);
+      imp = results.get(id) ?? null;
+    } catch {
+      // ensureImportance never throws — best-effort guard per contract.
+    }
+
+    const emailObj = {
+      id: email.id,
+      threadId: email.threadId,
+      snippet: email.snippet,
+      subject: headers['subject'] || '(No Subject)',
+      from: headers['from'] || 'Unknown',
+      to: headers['to'] || '',
+      date: new Date(parseInt(email.internalDate, 10)).toISOString(),
+      importanceScore: importance.score,
+      isImportant: importance.isImportant,
+      importanceReasons: importance.reasons,
+      labels: email.labelIds || [],
+      isUnread: (email.labelIds || []).includes('UNREAD'),
+      body: {
         snippet: email.snippet,
-        subject: headers['subject'] || '(No Subject)',
-        from: headers['from'] || 'Unknown',
-        to: headers['to'] || '',
-        date: new Date(parseInt(email.internalDate, 10)).toISOString(),
-        importanceScore: importance.score,
-        isImportant: importance.isImportant,
-        importanceReasons: importance.reasons,
-        labels: email.labelIds || [],
-        isUnread: (email.labelIds || []).includes('UNREAD'),
-        body: {
-          snippet: email.snippet,
-          // We could extract the full body here if needed
-        }
+        // We could extract the full body here if needed
       }
+    };
+
+    return c.json({
+      email: imp === null ? emailObj : { ...emailObj, llmScore: imp.llmScore, llmReason: imp.reason }
     });
   } catch (error) {
     console.error('Error fetching email:', error);
@@ -349,6 +407,108 @@ app.post('/api/email/:id/reply', zValidator('json', z.object({
     console.error('Error sending reply:', error);
     const msg = error instanceof Error ? error.message : 'Failed to send reply';
     throw new HTTPException(500, { message: msg });
+  }
+});
+
+// Re-score a batch of emails with the LLM (dashboard refresh button)
+app.post('/api/importance/refresh', zValidator('json', z.object({
+  ids: z.array(z.string()).min(1).max(100),
+  accountId: z.string().optional(),
+})), async (c) => {
+  const { ids, accountId: bodyAccountId } = c.req.valid('json');
+  if (!llmService.isEnabled()) {
+    return c.json({ error: 'LLM disabled' }, 503);
+  }
+  const accountId = bodyAccountId ?? c.req.query('account') ?? EMAIL_ACCOUNTS[0].id;
+  if (!EMAIL_ACCOUNTS.some(acc => acc.id === accountId)) {
+    throw new HTTPException(400, { message: 'Invalid account ID' });
+  }
+  const accountEmail = EMAIL_ACCOUNTS.find(acc => acc.id === accountId)?.email ?? '';
+
+  try {
+    const emails = await Promise.all(
+      ids.map(async (messageId) => {
+        try {
+          return await gmailService.getMessage(accountId, messageId);
+        } catch {
+          return null; // Skip ids that fail to fetch
+        }
+      })
+    );
+    const found = emails.filter((email): email is Email => email !== null);
+    const results = await llmService.ensureImportance(found.map((email) => toEmailLike(email)), accountEmail);
+    const scores = [...results.entries()].map(([emailId, imp]) => ({
+      emailId,
+      llmScore: imp.llmScore,
+      reason: imp.reason,
+      isImportant: imp.isImportant,
+    }));
+    return c.json({
+      scores,
+      model: llmService.getActiveModelInfo().model,
+      completed: true,
+    });
+  } catch (error) {
+    console.error('Error refreshing importance:', error);
+    const msg = error instanceof Error ? error.message : 'Failed to refresh importance';
+    throw new HTTPException(500, { message: msg });
+  }
+});
+
+// LLM summary for a single email
+app.get('/api/summary/:id', async (c) => {
+  const { id } = c.req.param();
+  const accountId = c.req.query('account') || EMAIL_ACCOUNTS[0].id;
+  // Gate before the Gmail fetch so a disabled LLM 503s without network
+  if (!llmService.isEnabled()) {
+    return c.json({ error: 'LLM disabled' }, 503);
+  }
+
+  try {
+    const email = await gmailService.getMessage(accountId, id);
+    const result = await llmService.summarize(toEmailLike(email));
+    if (result === null) {
+      return c.json({ error: 'LLM summary failed' }, 502);
+    }
+    return c.json({
+      emailId: id,
+      summary: result.summary,
+      keyPoints: result.keyPoints,
+      suggestedAction: result.suggestedAction,
+      model: result.model,
+    });
+  } catch (error) {
+    console.error('Error fetching email for summary:', error);
+    return c.json({ error: 'Email not found' }, 404);
+  }
+});
+
+// Draft an LLM reply for a single email (does NOT send)
+app.post('/api/reply/draft', zValidator('json', z.object({
+  messageId: z.string(),
+  tone: z.enum(['professional', 'friendly', 'concise', 'formal']),
+  accountId: z.string().optional(),
+})), async (c) => {
+  const { messageId, tone, accountId: bodyAccountId } = c.req.valid('json');
+  if (!llmService.isEnabled()) {
+    return c.json({ error: 'LLM disabled' }, 503);
+  }
+  const accountId = bodyAccountId ?? c.req.query('account') ?? EMAIL_ACCOUNTS[0].id;
+
+  try {
+    const email = await gmailService.getMessage(accountId, messageId);
+    const result = await llmService.draftReply(toEmailLike(email), tone);
+    if (result === null) {
+      return c.json({ error: 'LLM draft failed' }, 502);
+    }
+    return c.json({
+      messageId,
+      reply: result.reply,
+      model: result.model,
+    });
+  } catch (error) {
+    console.error('Error fetching email for draft:', error);
+    return c.json({ error: 'Email not found' }, 404);
   }
 });
 

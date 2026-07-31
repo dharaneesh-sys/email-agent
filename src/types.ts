@@ -37,6 +37,8 @@ export interface EmailListItem {
   isImportant: boolean;
   labels: string[];
   isUnread: boolean;
+  llmScore?: number; // LLM importance score, attached when cached scoring exists
+  llmReason?: string; // LLM importance reason, attached when cached scoring exists
 }
 
 // Thread summary for UI
