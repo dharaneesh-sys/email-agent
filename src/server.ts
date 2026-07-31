@@ -355,26 +355,32 @@ app.get('/api/labels', async (c) => {
 app.get('/api/stats', async (c) => {
   const accountId = c.req.query('account') || EMAIL_ACCOUNTS[0].id;
   try {
+    const accountEmail = EMAIL_ACCOUNTS.find((acc) => acc.id === accountId)?.email ?? '';
     // Get unread count
-    const [unreadCount, totalInbox, recentIds] = await Promise.all([
+    const [unreadCount, totalInbox, messageIds] = await Promise.all([
       gmailService.countMessages(accountId, 'is:unread in:inbox'),
       gmailService.countMessages(accountId, 'in:inbox'),
+      // Same source set as /api/emails (in:inbox, newest 50) so the important
+      // badge matches what the Important filter page actually shows.
       gmailService.listMessages(accountId, {
-        query: 'in:inbox newer_than:7d',
+        query: 'in:inbox',
         maxResults: 100,
       }),
     ]);
-    
+
     let importantCount = 0;
-    if (recentIds.length > 0) {
+    if (messageIds.length > 0) {
       const emails = await Promise.all(
-        recentIds.slice(0, 50).map(id => gmailService.getMessage(accountId, id))
+        messageIds.slice(0, 50).map(id => gmailService.getMessage(accountId, id))
       );
       importantCount = emails.reduce((count, email) => {
-        const importance = importanceScorer.scoreEmail(email, 
-          EMAIL_ACCOUNTS.find(acc => acc.id === accountId)!.email
-        );
-        return count + (importance.isImportant ? 1 : 0);
+        const importance = importanceScorer.scoreEmail(email, accountEmail);
+        const labelImportant = (email.labelIds || []).includes('IMPORTANT');
+        // Mirror /api/emails: include LLM-cached importance too, so the badge
+        // matches the count on the Important filter page.
+        const cached = llmService.getImportance(email.id);
+        const isImportant = importance.isImportant || labelImportant || (cached?.isImportant ?? false);
+        return count + (isImportant ? 1 : 0);
       }, 0);
     }
 
