@@ -22,6 +22,6 @@
     "moduleDetection": "force",
     "noEmit": true
   },
-  "include": ["src", "scripts", "index.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src", "scripts/benchmark*.ts", "index.ts"],
+  "exclude": ["node_modules", "dist", "scripts/qa"]
 }
