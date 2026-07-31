@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Agent - Smart Inbox</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1f2937;
+            --darker: #111827;
+            --light: #f9fafb;
+            --lighter: #e5e7eb;
+            --gray: #6b7280;
+            --gray-dark: #4b5563;
+            --border: #e5e7eb;
+            --radius: 8px;
+            --shadow: 0 2px 4px rgba(0,0,0,0.1);
+            --transition: 0.2s ease;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8fafc;
+            color: #1f2937;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        header {
+            background: white;
+            box-shadow: var(--shadow);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        h1 {
+            color: var(--primary);
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        
+        .stats {
+            display: flex;
+            gap: 2rem;
+            font-size: 0.9rem;
+            color: var(--gray-dark);
+        }
+        
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .stat-value {
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        .auth-status {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: var(--light);
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+        }
+        
+        .auth-status.connected {
+            border-color: var(--success);
+            background-color: #ecfdf5;
+        }
+        
+        .auth-status.disconnected {
+            border-color: var(--danger);
+            background-color: #fef2f2;
+        }
+        
+        .auth-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .auth-btn:hover {
+            background: var(--primary-dark);
+        }
+        
+        .auth-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+        
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 0.9rem;
+        }
+        
+        .filter-btn, .action-btn {
+            padding: 0.75rem 1.25rem;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+        }
+        
+        .filter-btn {
+            background: white;
+            border: 1px solid var(--border);
+            color: var(--gray-dark);
+        }
+        
+        .filter-btn:hover {
+            background: var(--lighter);
+        }
+        
+        .filter-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .action-btn {
+            background: var(--success);
+            color: white;
+        }
+        
+        .action-btn:hover {
+            background: #059669;
+        }
+        
+        .action-btn.secondary {
+            background: var(--gray);
+            color: white;
+        }
+        
+        .action-btn.secondary:hover {
+            background: var(--gray-dark);
+        }
+        
+        .email-list {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        
+        .email-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--border);
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .email-item:hover {
+            background: var(--lighter);
+        }
+        
+        .email-item.unread {
+            background: #f0f9ff;
+            border-left: 3px solid var(--primary);
+        }
+        
+        .email-item.important {
+            border-left: 3px solid var(--warning);
+        }
+        
+        .email-item.unread.important {
+            border-left: 3px solid var(--danger);
+        }
+        
+        .email-checkbox {
+            width: 1.25rem;
+            height: 1.25rem;
+            margin-top: 0.25rem;
+        }
+        
+        .email-content {
+            flex: 1;
+            margin-left: 1rem;
+        }
+        
+        .email-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        .email-subject {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--dark);
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        .email-from {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+        
+        .email-date {
+            font-size: 0.8rem;
+            color: var(--gray-dark);
+        }
+        
+        .email-snippet {
+            color: var(--gray-dark);
+            margin-bottom: 0.75rem;
+            line-height: 1.5;
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .email-tags {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .tag {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        
+        .tag.importance {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fbbf24;
+        }
+        
+        .tag.unread {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+        
+        .tag.starred {
+            background: #fed7aa;
+            color: #9a3412;
+            border: 1px solid #fdba74;
+        }
+        
+        .tag.label {
+            background: #e0e7ff;
+            color: #3730a3;
+            border: 1px solid #c7d2fe;
+        }
+        
+        .email-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            flex-wrap: wrap;
+        }
+        
+        .email-actions button {
+            background: none;
+            border: none;
+            color: var(--gray);
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            transition: var(--transition);
+        }
+        
+        .email-actions button:hover {
+            background: var(--lighter);
+            color: var(--dark);
+        }
+        
+        .email-actions button.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: var(--gray);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--gray);
+        }
+        
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: var(--radius);
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            line-height: 1;
+            color: var(--gray);
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+        
+        .modal-close:hover {
+            background: var(--lighter);
+        }
+        
+        .modal-body {
+            padding: 1.5rem;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            justify-content: flex-end;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        
+        .btn-secondary {
+            background: var(--light);
+            color: var(--dark);
+            border: 1px solid var(--border);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--lighter);
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--dark);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+        
+        .toast.success {
+            background: var(--success);
+        }
+        
+        .toast.error {
+            background: var(--danger);
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+            
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
+            .stats {
+                flex-wrap: wrap;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .search-box {
+                width: 100%;
+            }
+            
+            .email-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .email-content {
+                margin-left: 0;
+                margin-top: 1rem;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>Email Agent</h1>
+                <p class="text-sm text-gray-500">Smart inbox with AI-powered prioritization</p>
+            </div>
+            <div class="auth-status" id="authStatus">
+                <div>Status: <span id="authStatusText">Checking...</span></div>
+                <button class="auth-btn" id="authBtn">Connect Account</button>
+            </div>
+        </header>
+        
+        <div class="stats" id="stats">
+            <div class="stat">
+                <span class="stat-label">Unread:</span>
+                <span class="stat-value" id="unreadCount">-</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Important:</span>
+                <span class="stat-value" id="importantCount">-</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Total:</span>
+                <span class="stat-value" id="totalCount">-</span>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <input type="text" class="search-box" id="searchInput" placeholder="Search emails...">
+            <button class="filter-btn" id="filterAll">All</button>
+            <button class="filter-btn" id="filterUnread">Unread</button>
+            <button class="filter-btn" id="filterImportant">Important</button>
+            <button class="filter-btn" id="filterStarred">Starred</button>
+            <button class="action-btn" id="refreshBtn">🔄 Refresh</button>
+        </div>
+        
+        <div class="email-list" id="emailList">
+            <div class="loading" id="loadingState">
+                <div>Loading emails...</div>
+            </div>
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <div class="empty-state-icon">📭</div>
+                <p>No emails found</p>
+                <p>Try adjusting your filters or check your connection.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reply Modal -->
+    <div class="modal" id="replyModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Reply to Email</h2>
+                <button class="modal-close" id="replyClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="replyForm">
+                    <div class="mb-3">
+                        <label for="replyTo" class="form-label">To:</label>
+                        <input type="text" id="replyTo" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="replySubject" class="form-label">Subject:</label>
+                        <input type="text" id="replySubject" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="replyBody" class="form-label">Message:</label>
+                        <textarea id="replyBody" class="form-control" rows="6" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="replyAll">
+                            <label class="form-check-label" for="replyAll">Reply to all</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <div class="btn-group">
+                    <button class="btn btn-secondary" id="replyCancel">Cancel</button>
+                    <button class="btn btn-primary" id="replySend">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // Configuration
+        const API_BASE = '/api';
+        const DEFAULT_ACCOUNT = 'personal'; // Will be dynamically determined
+        let currentAccount = null;
+        let emails = [];
+        let filteredEmails = [];
+        let currentFilter = 'all';
+        let searchQuery = '';
+        let selectedEmailId = null;
+
+        // DOM Elements
+        const authStatus = document.getElementById('authStatus');
+        const authStatusText = document.getElementById('authStatusText');
+        const authBtn = document.getElementById('authBtn');
+        const stats = {
+            unread: document.getElementById('unreadCount'),
+            important: document.getElementById('importantCount'),
+            total: document.getElementById('totalCount')
+        };
+        const searchInput = document.getElementById('searchInput');
+        const filterButtons = {
+            all: document.getElementById('filterAll'),
+            unread: document.getElementById('filterUnread'),
+            important: document.getElementById('filterImportant'),
+            starred: document.getElementById('filterStarred')
+        };
+        const refreshBtn = document.getElementById('refreshBtn');
+        const emailList = document.getElementById('emailList');
+        const loadingState = document.getElementById('loadingState');
+        const emptyState = document.getElementById('emptyState');
+        const replyModal = document.getElementById('replyModal');
+        const replyClose = document.getElementById('replyClose');
+        const replyCancel = document.getElementById('replyCancel');
+        const replySend = document.getElementById('replySend');
+        const replyForm = document.getElementById('replyForm');
+        const replyTo = document.getElementById('replyTo');
+        const replySubject = document.getElementById('replySubject');
+        const replyBody = document.getElementById('replyBody');
+        const replyAllCheckbox = document.getElementById('replyAll');
+        const toast = document.getElementById('toast');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check URL params for auth result
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('auth') === 'success') {
+                showToast('Account connected successfully!', 'success');
+                // Clean URL without reload
+                window.history.replaceState({}, '', window.location.pathname);
+            } else if (params.get('auth') === 'failed') {
+                showToast('Authentication failed: ' + (params.get('reason') || 'Unknown error'), 'error');
+                window.history.replaceState({}, '', window.location.pathname);
+            }
+            initAuth();
+            loadStats();
+            loadEmails();
+            setupEventListeners();
+            
+            // Auto-refresh every 2 minutes
+            setInterval(() => {
+                if (!document.hidden) { // Only refresh when tab is visible
+                    loadEmails();
+                    loadStats();
+                }
+            }, 120000);
+        });
+
+        // Authentication
+        async function initAuth() {
+            try {
+                const response = await fetch(`${API_BASE}/auth/status`);
+                const data = await response.json();
+                
+                // Find first authenticated account
+                const authedAccount = data.accounts.find(acc => acc.authenticated);
+                if (authedAccount) {
+                    currentAccount = authedAccount.id;
+                    updateAuthStatus(true, authedAccount.email);
+                } else {
+                    currentAccount = null;
+                    updateAuthStatus(false);
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                updateAuthStatus(false);
+            }
+        }
+
+        function updateAuthStatus(isConnected, email = '') {
+            if (isConnected) {
+                authStatus.className = 'auth-status connected';
+                authStatusText.textContent = `Connected as ${email}`;
+                authBtn.textContent = 'Disconnect';
+                authBtn.onclick = logout;
+            } else {
+                authStatus.className = 'auth-status disconnected';
+                authStatusText.textContent = 'Not connected';
+                authBtn.textContent = 'Connect Account';
+                authBtn.onclick = login;
+            }
+        }
+
+        async function login() {
+            authBtn.disabled = true;
+            authBtn.textContent = 'Connecting...';
+            
+            try {
+                const statusResp = await fetch(`${API_BASE}/auth/status`);
+                const statusData = await statusResp.json();
+                const accounts = statusData.accounts || [];
+                if (accounts.length === 0) {
+                    showToast('No accounts configured', 'error');
+                    return;
+                }
+                // Find first unauthed account, or fall back to first account
+                const account = statusData.accounts.find(a => a.needsAuth) || accounts[0];
+                
+                const response = await fetch(`${API_BASE}/auth/${account.id}/url`);
+                const data = await response.json();
+                if (data.authUrl) {
+                    // Redirect the current page to Google auth — avoids popup blocker
+                    window.location.href = data.authUrl;
+                }
+            } catch (error) {
+                console.error('Auth error:', error);
+                showToast('Authentication failed', 'error');
+                authBtn.disabled = false;
+                authBtn.textContent = 'Connect Account';
+            }
+        }
+
+        async function logout() {
+            authBtn.disabled = true;
+            authBtn.textContent = 'Disconnecting...';
+            
+            try {
+                await fetch(`${API_BASE}/auth/${currentAccount}/signout`);
+                updateAuthStatus(false);
+                showToast('Disconnected successfully', 'success');
+            } catch (error) {
+                console.error('Logout error:', error);
+            } finally {
+                authBtn.disabled = false;
+                authBtn.textContent = 'Connect Account';
+            }
+        }
+
+        // Stats
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_BASE}/stats?account=${currentAccount || ''}`);
+                const data = await response.json();
+                
+                stats.unread.textContent = data.unreadCount || 0;
+                stats.important.textContent = data.importantCount || 0;
+                stats.total.textContent = data.totalInbox || 0;
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
+        // Email loading
+        async function loadEmails() {
+            if (!currentAccount) {
+                showEmptyState('Please connect your email account');
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const params = new URLSearchParams({
+                    account: currentAccount,
+                    query: searchQuery,
+                    maxResults: 50
+                });
+                
+                const response = await fetch(`${API_BASE}/emails?${params}`);
+                const data = await response.json();
+                
+                emails = data.emails || [];
+                applyFilters();
+                renderEmailList();
+                
+            } catch (error) {
+                console.error('Failed to load emails:', error);
+                showErrorState('Failed to load emails. Please try again.');
+            }
+        }
+
+        function applyFilters() {
+            filteredEmails = emails.filter(email => {
+                // Text search
+                const matchesSearch = 
+                    email.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    email.from.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    email.snippet.toLowerCase().includes(searchQuery.toLowerCase());
+                
+                // Filter by type
+                const matchesFilter = 
+                    currentFilter === 'all' ||
+                    (currentFilter === 'unread' && email.isUnread) ||
+                    (currentFilter === 'important' && email.isImportant) ||
+                    (currentFilter === 'starred' && email.labels.includes('STARRED'));
+                
+                return matchesSearch && matchesFilter;
+            });
+            
+            // Sort by importance first, then by date descending
+            filteredEmails.sort((a, b) => {
+                if (a.isImportant !== b.isImportant) {
+                    return b.isImportant ? 1 : -1; // Important first
+                }
+                return new Date(b.date) - new Date(a.date); // Newer first
+            });
+        }
+
+        function renderEmailList() {
+            if (filteredEmails.length === 0) {
+                showEmptyState('No emails match your filters');
+                return;
+            }
+            
+            emailList.innerHTML = '';
+            const fragment = document.createDocumentFragment();
+            
+            filteredEmails.forEach(email => {
+                const emailEl = createEmailElement(email);
+                fragment.appendChild(emailEl);
+            });
+            
+            emailList.appendChild(fragment);
+            hideLoading();
+        }
+
+        function createEmailElement(email) {
+            const div = document.createElement('div');
+            div.className = `email-item ${email.isUnread ? 'unread' : ''} ${email.isImportant ? 'important' : ''}`;
+            div.dataset.emailId = email.id;
+            
+            // Check if starred
+            const isStarred = email.labels.includes('STARRED');
+            
+            div.innerHTML = `
+                <input type="checkbox" class="email-checkbox" ${email.isUnread ? '' : 'checked'}>
+                <div class="email-content">
+                    <div class="email-header">
+                        <div class="email-subject">${escapeHtml(email.subject)}</div>
+                        <div class="email-date">${formatDate(new Date(email.date))}</div>
+                    </div>
+                    <div class="email-from">${escapeHtml(email.from)}</div>
+                    <div class="email-snippet">${escapeHtml(email.snippet)}</div>
+                    <div class="email-tags">
+                        ${email.isImportant ? '<span class="tag importance">⚡ Important</span>' : ''}
+                        ${email.isUnread ? '<span class="tag unread">📧 New</span>' : ''}
+                        ${isStarred ? '<span class="tag starred">⭐ Starred</span>' : ''}
+                        ${email.labels.filter(l => !['INBOX', 'UNREAD', 'STARRED', 'IMPORTANT'].includes(l)).map(l => `
+                            <span class="tag label">${escapeHtml(l)}</span>`).join('')}
+                    </div>
+                    <div class="email-actions">
+                        <button class="action-btn" data-action="toggle-read" title="${email.isUnread ? 'Mark as read' : 'Mark as unread'}">
+                            ${email.isUnread ? '📖' : '📭'}
+                        </button>
+                        <button class="action-btn" data-action="toggle-star" title="${isStarred ? 'Unstar' : 'Star'}">
+                            ${isStarred ? '⭐' : '☆'}
+                        </button>
+                        <button class="action-btn" data-action="archive" title="Archive">
+                            📦
+                        </button>
+                        <button class="action-btn" data-action="toggle-important" title="${email.isImportant ? 'Remove important' : 'Mark as important'}">
+                            ${email.isImportant ? '⚡' : '○'}
+                        </button>
+                        <button class="action-btn" data-action="reply" title="Reply">
+                            ↩️
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Add event listeners
+            const checkbox = div.querySelector('.email-checkbox');
+            checkbox.addEventListener('change', (e) => {
+                e.stopPropagation();
+                toggleRead(email.id, !email.isUnread);
+            });
+            
+            div.querySelectorAll('.email-actions button').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const action = btn.dataset.action;
+                    handleEmailAction(email.id, action);
+                });
+            });
+            
+            // Click to expand/view email
+            div.addEventListener('click', (e) => {
+                if (!e.target.closest('.email-actions button') && e.target !== checkbox) {
+                    showEmailDetail(email);
+                }
+            });
+            
+            return div;
+        }
+
+        function handleEmailAction(emailId, action) {
+            const email = emails.find(e => e.id === emailId);
+            if (!email) return;
+            
+            fetch(`${API_BASE}/email/${emailId}/action`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action,
+                    accountId: currentAccount
+                })
+            })
+            .then(async (res) => {
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Optimistically update UI
+                    switch (action) {
+                        case 'toggle-read':
+                            email.isUnread = !email.isUnread;
+                            break;
+                        case 'toggle-star':
+                            const starIndex = email.labels.indexOf('STARRED');
+                            if (starIndex > -1) {
+                                email.labels.splice(starIndex, 1);
+                            } else {
+                                email.labels.push('STARRED');
+                            }
+                            break;
+                        case 'archive':
+                            email.labels = email.labels.filter(l => l !== 'INBOX');
+                            break;
+                        case 'toggle-important':
+                            email.isImportant = !email.isImportant;
+                            break;
+                    }
+                    
+                    applyFilters();
+                    renderEmailList();
+                    loadStats();
+                    showToast(`Email ${action}ed`, 'success');
+                }
+            })
+            .catch(error => {
+                console.error('Action failed:', error);
+                showToast('Action failed', 'error');
+            });
+        }
+
+        // Search and filters
+        function setupEventListeners() {
+            searchInput.addEventListener('input', (e) => {
+                searchQuery = e.target.value;
+                applyFilters();
+                renderEmailList();
+            });
+            
+            Object.keys(filterButtons).forEach(key => {
+                filterButtons[key].addEventListener('click', () => {
+                    // Update active button
+                    Object.values(filterButtons).forEach(btn => btn.classList.remove('active'));
+                    filterButtons[key].classList.add('active');
+                    
+                    currentFilter = key;
+                    applyFilters();
+                    renderEmailList();
+                });
+            });
+            
+            refreshBtn.addEventListener('click', () => {
+                refreshBtn.disabled = true;
+                refreshBtn.innerHTML = '🔄 Refreshing...';
+                loadEmails().finally(() => {
+                    refreshBtn.disabled = false;
+                    refreshBtn.innerHTML = '🔄 Refresh';
+                });
+            });
+            
+            // Reply modal
+            replyClose.addEventListener('click', () => {
+                replyModal.style.display = 'none';
+            });
+            
+            replyCancel.addEventListener('click', () => {
+                replyModal.style.display = 'none';
+            });
+            
+            replyForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                sendReply();
+            });
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && replyModal.style.display === 'flex') {
+                    replyModal.style.display = 'none';
+                }
+                if (e.key === 'r' && !e.ctrlKey && !e.metaKey && !e.shiftKey && selectedEmailId) {
+                    e.preventDefault();
+                    replyToEmail(selectedEmailId);
+                }
+            });
+        }
+
+        // Email detail view
+        function showEmailDetail(email) {
+            selectedEmailId = email.id;
+            
+            // In a full implementation, we'd show a detailed view
+            // For now, we'll just highlight the selected email
+            document.querySelectorAll('.email-item').forEach(el => {
+                el.classList.toggle('selected', el.dataset.emailId === email.id);
+            });
+            
+            // Show reply button in header or something
+            // For MVP, we'll just enable the reply action
+        }
+
+        function replyToEmail(emailId) {
+            const email = emails.find(e => e.id === emailId);
+            if (!email) return;
+            
+            // Show reply modal
+            replyModal.style.display = 'flex';
+            
+            // Prefill form
+            replyTo.value = extractEmailAddress(email.from);
+            replySubject.value = `Re: ${email.subject.startsWith('Re: ') ? email.subject : 'Re: ' + email.subject}`;
+            replyBody.value = ''; // Start empty
+            replyAllCheckbox.checked = false; // Default to reply-only
+            
+            // Focus on body
+            setTimeout(() => replyBody.focus(), 100);
+        }
+
+        function extractEmailAddress(from) {
+            const match = from.match(/<([^>]+)>/);
+            return match ? match[1] : from.trim();
+        }
+
+        async function sendReply() {
+            if (!selectedEmailId) return;
+            
+            const body = replyBody.value.trim();
+            if (!body) {
+                showToast('Please enter a reply', 'error');
+                return;
+            }
+            
+            replySend.disabled = true;
+            replySend.textContent = 'Sending...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/email/${selectedEmailId}/reply`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        body,
+                        accountId: currentAccount,
+                    })
+                });
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                if (data.success) {
+                    replyModal.style.display = 'none';
+                    replyForm.reset();
+                    showToast('Reply sent!', 'success');
+                    // Optionally refresh to see sent email in sent folder
+                }
+            } catch (error) {
+                console.error('Reply failed:', error);
+                showToast('Failed to send reply', 'error');
+            } finally {
+                replySend.disabled = false;
+                replySend.textContent = 'Send';
+            }
+        }
+
+        // UI Helpers
+        function showLoading() {
+            loadingState.style.display = 'block';
+            emailList.style.display = 'none';
+            emptyState.style.display = 'none';
+        }
+        
+        function hideLoading() {
+            loadingState.style.display = 'none';
+            emailList.style.display = 'block';
+            emptyState.style.display = 'none';
+        }
+        
+        function showEmptyState(message) {
+            loadingState.style.display = 'none';
+            emailList.style.display = 'none';
+            emptyState.style.display = 'block';
+            emptyState.querySelector('p').textContent = message;
+        }
+        
+        function showErrorState(message) {
+            loadingState.style.display = 'none';
+            emailList.style.display = 'none';
+            emptyState.style.display = 'block';
+            emptyState.querySelector('.empty-state-icon').textContent = '❌';
+            emptyState.querySelector('p:first-child').textContent = 'Error';
+            emptyState.querySelector('p:last-child').textContent = message;
+        }
+        
+        function showToast(message, type = 'info') {
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.style.display = 'block';
+            
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function formatDate(date) {
+            const now = new Date();
+            const diff = now - date;
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const days = Math.floor(hours / 24);
+            
+            if (days > 7) {
+                return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+            } else if (days > 0) {
+                return `${days}d ago`;
+            } else if (hours > 0) {
+                return `${hours}h ago`;
+            } else {
+                const minutes = Math.floor(diff / (1000 * 60));
+                return `${minutes}m ago`;
+            }
+        }
+    </script>
+</body>
+</html>
