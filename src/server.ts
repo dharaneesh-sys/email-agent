@@ -26,7 +26,11 @@ app.use('/api/*', async (c, next) => {
     return;
   }
   const accountId = c.req.query('account') || EMAIL_ACCOUNTS[0].id;
-  if (!authManager.hasValidToken(accountId)) {
+  // Attempt to obtain a valid token (refreshes expired tokens). Only 401 when
+  // the account has no token or the refresh fails (revoked/invalid).
+  try {
+    await authManager.getAccessToken(accountId);
+  } catch {
     throw new HTTPException(401, { message: `Account ${accountId} not authenticated` });
   }
   await next();
@@ -513,6 +517,9 @@ app.post('/api/reply/draft', zValidator('json', z.object({
 });
 
 app.get('/', (c) => c.redirect('/dashboard.html'));
+
+// Browsers request /favicon.ico unconditionally — serve 204 instead of a noisy 404.
+app.get('/favicon.ico', (c) => c.body(null, 204));
 
 // Serve static files (dashboard.html, CSS, JS, etc.)
 app.get('/*', serveStatic({ root: './' }));

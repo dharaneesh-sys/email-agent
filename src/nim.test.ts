@@ -136,6 +136,20 @@ describe('chat', () => {
     expect(calls).toBe(2)
   })
 
+  test('429 with Retry-After: surfaces the wait on the thrown error', async () => {
+    mockFetch(async () =>
+      new Response(JSON.stringify({ status: 429, title: 'Too Many Requests' }), {
+        status: 429,
+        headers: { 'retry-after': '1' },
+      })
+    )
+    await expectNimError(chat({ model: 'm', messages: [{ role: 'user', content: 'hi' }] }), (err) => {
+      expect(err.status).toBe(429)
+      expect(err.retryable).toBe(true)
+      expect(err.retryAfterMs).toBe(1000)
+    })
+  })
+
   test('500 three times: throws NimError after 2 retries (3 calls), retryable', async () => {
     let calls = 0
     mockFetch(async () => {

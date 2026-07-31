@@ -64,7 +64,7 @@ describe('NIM_CONFIG', () => {
     expect(NIM_CONFIG.timeoutMs).toBe(90000)
     expect(NIM_CONFIG.maxRetries).toBe(2)
     expect(NIM_CONFIG.maxOutputTokens).toEqual({ importance: 128, summary: 512, reply: 1024 })
-    expect(NIM_CONFIG.importance).toEqual({ batchSize: 5, maxPerSync: 25, threshold: 60, concurrency: 2 })
+    expect(NIM_CONFIG.importance).toEqual({ batchSize: 3, maxPerSync: 25, threshold: 60, concurrency: 1 })
     expect(NIM_CONFIG.generatedModelPath.endsWith('src/generated-model.json')).toBe(true)
     expect(NIM_CONFIG.apiKey === null || NIM_CONFIG.apiKey.startsWith('nvapi-')).toBe(true)
   })

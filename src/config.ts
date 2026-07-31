@@ -104,7 +104,7 @@ export const NIM_CONFIG = {
   timeoutMs: Number(process.env['NIM_TIMEOUT_MS'] ?? 90000),
   maxRetries: Number(process.env['NIM_MAX_RETRIES'] ?? 2),
   maxOutputTokens: { importance: 128, summary: 512, reply: 1024 },
-  importance: { batchSize: 5, maxPerSync: 25, threshold: 60, concurrency: 2 },
+  importance: { batchSize: 3, maxPerSync: 25, threshold: 60, concurrency: 1 },
 }
 
 // Importance scoring rules

@@ -242,7 +242,10 @@ export class LlmService {
   // Fire-and-forget importance scoring. Never throws.
   enqueueImportance(emails: EmailLike[], accountEmail: string): void {
     if (!this.isEnabled()) return
-    const fresh = emails.filter((email) => !this.importanceCache.has(email.id))
+    const fresh = emails.filter((email) => {
+      const cached = this.importanceCache.get(email.id)
+      return cached === undefined || cached.status === 'failed'
+    })
     const toProcess = fresh.slice(0, NIM_CONFIG.importance.maxPerSync)
     if (toProcess.length === 0) return
     for (const email of toProcess) {
@@ -270,7 +273,7 @@ export class LlmService {
     const toScore: EmailLike[] = []
     for (const email of emails) {
       const cached = this.importanceCache.get(email.id)
-      if (cached === undefined) {
+      if (cached === undefined || cached.status === 'failed') {
         toScore.push(email)
       } else if (cached.status === 'done' && cached.result !== null) {
         results.set(email.id, cached.result)
@@ -328,8 +331,8 @@ export class LlmService {
       this.summaryCacheSet(key, summary)
       return summary
     } catch (err) {
+      // Do not cache the failure — a later request retries the summary.
       console.warn(`Summary failed for ${email.id}: ${errorMessage(err)}`)
-      this.summaryCacheSet(key, null)
       return null
     }
   }
@@ -356,8 +359,8 @@ export class LlmService {
       this.draftCacheSet(key, draft)
       return draft
     } catch (err) {
+      // Do not cache the failure — a later request retries the draft.
       console.warn(`Draft failed for ${email.id}: ${errorMessage(err)}`)
-      this.draftCacheSet(key, null)
       return null
     }
   }

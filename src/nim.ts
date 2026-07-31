@@ -72,14 +72,16 @@ export class NimError extends Error {
   body: unknown
   retryable: boolean
   isAuth: boolean
+  retryAfterMs: number | null
 
-  constructor(status: number, body: unknown, message: string) {
+  constructor(status: number, body: unknown, message: string, retryAfterMs: number | null = null) {
     super(message)
     this.name = 'NimError'
     this.status = status
     this.body = body
     this.isAuth = status === 401 || status === 403
     this.retryable = status === 408 || status === 429 || status >= 500
+    this.retryAfterMs = retryAfterMs
   }
 }
 
@@ -117,7 +119,9 @@ async function nimErrorFromResponse(response: Response): Promise<NimError> {
   } catch {
     // Non-JSON error body — the generic fallback message covers it.
   }
-  return new NimError(response.status, body, errorMessageFromBody(body, response.status))
+  const retryAfter = response.headers.get('retry-after')
+  const retryAfterMs = retryAfter !== null ? Math.max(0, Number(retryAfter)) * 1000 : null
+  return new NimError(response.status, body, errorMessageFromBody(body, response.status), retryAfterMs)
 }
 
 // Network failures are transient in nature → retryable. Aborts (user signal or
@@ -199,7 +203,8 @@ export async function chat(params: NimChatParams): Promise<NimChatResult> {
     'Content-Type': 'application/json',
   }
 
-  // attempts = 1 + maxRetries (3 total); backoff 500ms * 2^attempt.
+  // attempts = 1 + maxRetries (3 total); backoff 500ms * 2^attempt, or the
+  // server's Retry-After header when rate-limited (429).
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const attemptStart = Date.now()
     let nimError: NimError
@@ -221,7 +226,8 @@ export async function chat(params: NimChatParams): Promise<NimChatResult> {
       nimError = toNimError(err)
     }
     if (!nimError.retryable || attempt === maxRetries) throw nimError
-    await sleep(500 * 2 ** attempt)
+    const wait = nimError.retryAfterMs ?? 500 * 2 ** attempt
+    await sleep(Math.min(wait, 30_000))
   }
   throw new NimError(0, null, 'NIM request failed') // unreachable — loop always returns or throws
 }
