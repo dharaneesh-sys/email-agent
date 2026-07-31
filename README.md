@@ -14,9 +14,18 @@ bun install
 bun run index.ts
 ```
 
-Serves the dashboard at `http://localhost:3030/dashboard.html`. Requires:
+Serves the React dashboard at `http://localhost:3030/` (built from `web/`, design system in `DESIGN.md`). Requires:
 - Gmail OAuth credentials (see `.env` — `.env.example` documents the required keys)
 - A NIM-compatible LLM endpoint (defaults to localhost, overridable via env)
+
+### Frontend
+
+The SPA lives in `web/` (Vite + React 19 + TS). Dev server proxies `/api` to the running Hono server:
+
+```bash
+cd web && bun install && bun run dev   # http://localhost:5173
+bun run build                          # tsc --noEmit && vite build -> web/dist (served by the server)
+```
 
 ## Test
 
@@ -31,13 +40,17 @@ Playwright runs from this repo's own `node_modules` — no external installs nee
 Start the server first, then:
 
 ```bash
-# DOM audit: tokens, layout, overflow, badges
+# SPA audits (React app): shell/scroll-owners/overflow, interaction, modal+draft flow
+#   spa_dom_check.ts     — shell geometry, tokens, fonts, rail width, account rows, no overflow
+#   spa_interact_check.ts — list click → detail pane, summary, tone select, reply modal, 'r'/Esc, 375px reflow, reduced-motion
+#   spa_modal_check.ts   — waits for AI summary (NIM ~10s), draft reply body, reply-to, tone options
+bun run scripts/qa/spa_dom_check.ts
+bun run scripts/qa/spa_interact_check.ts
+bun run scripts/qa/spa_modal_check.ts
+
+# Legacy dashboard audits (still served at /dashboard.html during transition)
 bun run scripts/qa/dom_check.ts
-
-# Full end-to-end: email click -> AI summary -> smart reply modal
 bun run scripts/qa/e2e_check.ts
-
-# Post-polish audits (interaction, modal flow, mobile, reduced-motion)
 bun run scripts/qa/polish_dom_check.ts
 bun run scripts/qa/polish_interact_check.ts
 bun run scripts/qa/polish_modal_check.ts
@@ -49,5 +62,6 @@ If Chromium is elsewhere, point `executablePath` in the script to your binary.
 
 ```bash
 bunx tsc --noEmit        # server code
+bunx tsc --noEmit -p web/tsconfig.json  # SPA code
 bunx tsc --noEmit -p scripts/qa/tsconfig.json  # QA scripts (DOM libs)
 ```

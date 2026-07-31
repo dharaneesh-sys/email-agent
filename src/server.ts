@@ -108,10 +108,10 @@ app.get('/api/oauth2callback', zValidator('query', z.object({
   const { code, state } = c.req.valid('query');
   try {
     await authManager.handleCallback(code, state);
-    return c.redirect(`/dashboard.html?auth=success&account=${encodeURIComponent(state)}`);
+    return c.redirect(`/?auth=success&account=${encodeURIComponent(state)}`);
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'Unknown error';
-    return c.redirect(`/dashboard.html?auth=failed&reason=${encodeURIComponent(reason)}`);
+    return c.redirect(`/?auth=failed&reason=${encodeURIComponent(reason)}`);
   }
 });
 
@@ -516,10 +516,23 @@ app.post('/api/reply/draft', zValidator('json', z.object({
   }
 });
 
-app.get('/', (c) => c.redirect('/dashboard.html'));
-
-// Browsers request /favicon.ico unconditionally — serve 204 instead of a noisy 404.
+// Serve the React SPA at the root. Built output lives in web/dist/.
+// Hashed assets are immutable by content-addressing; index.html is not hashed
+// so it must revalidate to discover new asset hashes.
+app.get('/', serveStatic({ root: './web/dist' }));
+app.get(
+  '/assets/*',
+  serveStatic({
+    root: './web/dist',
+    onFound: (_path, c) => {
+      c.header('Cache-Control', 'public, max-age=31536000, immutable');
+    },
+  }),
+);
 app.get('/favicon.ico', (c) => c.body(null, 204));
+
+// Legacy: keep dashboard.html reachable for reference/A-B during transition.
+app.get('/dashboard.html', serveStatic({ path: './dashboard.html' }));
 
 // Serve static files (dashboard.html, CSS, JS, etc.)
 app.get('/*', serveStatic({ root: './' }));

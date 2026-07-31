@@ -1,0 +1,75 @@
+/* ============================================================
+   Email Agent Design System — Design Tokens (DESIGN.md §2-§4)
+   Single source of truth. Component files reference these only.
+   ============================================================ */
+
+:root {
+  /* --- Color (§2) --- */
+  --surface-primary: #0E0E11;
+  --surface-secondary: #16161B;
+  --surface-elevated: #1D1D24;
+  --surface-hover: #1A1A20;
+  --text-primary: #F5F4F7;
+  --text-secondary: #A8A6B2;
+  --text-tertiary: #87848a;
+  --border-default: #26262E;
+  --border-subtle: #1B1B21;
+  --accent-primary: #CBB7FB;
+  --accent-hover: #DCCCFD;
+  --accent-link: #B79FF6;
+  --accent-muted: rgb(203 183 251 / 0.14);
+  --status-success: #8CE0AE;
+  --status-warning: #F5C77E;
+  --status-error: #F0807E;
+  --status-info: #CBB7FB;
+  --scrim: rgb(6 6 9 / 0.6);
+
+  /* Derived tints — extended per §2 rule ("extend the table first"):
+     alpha mixes of existing palette tokens, no new hues. */
+  --tint-accent: color-mix(in srgb, var(--accent-primary) 14%, transparent);
+  --tint-warning: color-mix(in srgb, var(--status-warning) 14%, transparent);
+  --tint-error: color-mix(in srgb, var(--status-error) 14%, transparent);
+
+  /* --- Typography (§3) --- */
+  --font-sans: 'Geist Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --text-h1: 1.25rem;        /* 20px, 600, 1.3, -0.02em */
+  --text-h2: 1rem;           /* 16px, 600, 1.4, -0.01em */
+  --text-body: 0.9375rem;    /* 15px */
+  --text-body-sm: 0.875rem;  /* 14px */
+  --text-caption: 0.78125rem;/* 12.5px, 500 */
+  --text-overline: 0.6875rem;/* 11px, 600, 0.08em uppercase */
+  --text-data: 0.8125rem;    /* 13px, 500, mono, tabular-nums */
+
+  /* --- Spacing (§4, 4px base) --- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* --- Radii (task contract: 8px small, 16px cards/panels/modals) --- */
+  --radius-sm: 8px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* --- Motion (§6) --- */
+  --duration-micro: 150ms;
+  --duration-standard: 250ms;
+  --duration-emphasis: 400ms;
+  --duration-ambient: 1.4s;
+  --ease-out: ease-out;
+  --ease-in-out: ease-in-out;
+  --ease-emphasis: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* --- Depth (§7): exactly one shadow level — modal only --- */
+  --shadow-modal: 0 16px 48px rgb(0 0 0 / 0.5);
+
+  /* --- Layout (§4) --- */
+  --rail-width: 220px;
+  --rail-width-collapsed: 64px;
+}
