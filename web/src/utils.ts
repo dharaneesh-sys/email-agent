@@ -32,10 +32,11 @@ export function shortenModelName(model: string | null | undefined): string {
   return name.replace(/-(instruct|chat|latest|it|q4[_k0-9]+|gguf|fp16|bf16|8bit|4bit)$/i, '');
 }
 
-/** XSS-safe HTML → text extraction (DESIGN.md §8 debt) */
+/** XSS-safe HTML → text extraction (DESIGN.md §8 debt). Prefers innerText
+ * so paragraphs/line breaks survive for HTML-only emails. */
 export function sanitizeHtml(html: string): string {
   const doc = new DOMParser().parseFromString(html, 'text/html');
-  return doc.body.textContent ?? '';
+  return doc.body.innerText ?? doc.body.textContent ?? '';
 }
 
 export function isHtml(text: string): boolean {
@@ -50,6 +51,86 @@ export function resolveBody(body: unknown): string | null {
     if (typeof b.snippet === 'string') return b.snippet;
   }
   return null;
+}
+
+/** Detail-pane resolution: full text, else sanitized html, else snippet */
+export function resolveDetailBody(
+  body: { snippet?: string; text?: string | null; html?: string | null } | undefined | null,
+): string | null {
+  if (body === null) return null;
+  if (body?.text) return body.text;
+  if (body?.html) return sanitizeHtml(body.html);
+  return body?.snippet ?? null;
+}
+
+const BLOCKED_TAGS = new Set([
+  'script', 'style', 'iframe', 'object', 'embed', 'link', 'meta', 'form', 'button', 'noscript', 'svg', 'template',
+]);
+
+/**
+ * Sanitize email HTML for rendering while preserving links and images.
+ * Strips scripts/styles/forms/event handlers; keeps http(s)/mailto/tel hrefs
+ * and http(s) or root-relative srcs; rewrites `cid:` image refs via cidMap.
+ * Output is safe to inject with dangerouslySetInnerHTML.
+ */
+export function sanitizeEmailHtml(html: string, cidMap: Record<string, string>): string {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+
+  const walk = (node: Element): void => {
+    for (const el of Array.from(node.children)) {
+      if (BLOCKED_TAGS.has(el.tagName.toLowerCase())) {
+        el.remove();
+        continue;
+      }
+      for (const attr of Array.from(el.attributes)) {
+        const name = attr.name.toLowerCase();
+        if (name.startsWith('on') || name === 'style') el.removeAttribute(attr.name);
+      }
+      const href = el.getAttribute('href');
+      if (href !== null && !/^(https?:|mailto:|tel:)/i.test(href.trim())) el.removeAttribute('href');
+      const src = el.getAttribute('src');
+      if (src !== null) {
+        const trimmed = src.trim();
+        const lower = trimmed.toLowerCase();
+        if (lower.startsWith('cid:')) {
+          const key = lower.slice(4).replace(/[<>]/g, '');
+          const mapped = cidMap[key];
+          if (mapped) el.setAttribute('src', mapped);
+          else el.remove();
+        } else if (!/^(https?:|\/)/i.test(trimmed)) {
+          el.removeAttribute('src');
+        }
+      }
+      if (el.isConnected) walk(el);
+    }
+  };
+
+  walk(doc.body);
+  return doc.body.innerHTML;
+}
+
+const URL_PATTERN = /(https?:\/\/[^\s<>"']+)/gi;
+const EMAIL_PATTERN = /([\w.+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/g;
+
+/** Escape HTML entities, then wrap bare URLs and email addresses in anchors.
+ * Callers render inside a white-space: pre-wrap container to keep line breaks. */
+export function linkifyText(text: string): string {
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+  return escaped
+    .replace(URL_PATTERN, (m) => `<a href="${m}" target="_blank" rel="noopener noreferrer">${m}</a>`)
+    .replace(EMAIL_PATTERN, (m) => `<a href="mailto:${m}">${m}</a>`);
+}
+
+export function formatFileSize(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${Math.round(kb)} KB`;
+  return `${(kb / 1024).toFixed(1)} MB`;
 }
 
 /** Deterministic sender-hash → avatar palette index (0-5) */

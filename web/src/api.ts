@@ -7,6 +7,7 @@ import type {
   AuthUrlResponse,
   ConfigResponse,
   DraftResponse,
+  EmailAttachment,
   EmailDetailResponse,
   EmailsResponse,
   ImportanceResponse,
@@ -81,3 +82,13 @@ export const api = {
     }),
   config: () => get<ConfigResponse>('/api/config'),
 };
+
+export function attachmentUrl(id: string, attachment: EmailAttachment, account: string): string {
+  const params = new URLSearchParams({
+    account,
+    mimeType: attachment.mimeType,
+    filename: attachment.filename,
+    inline: attachment.inline ? '1' : '0',
+  });
+  return `/api/email/${encodeURIComponent(id)}/attachment/${encodeURIComponent(attachment.attachmentId)}?${params.toString()}`;
+}

@@ -1,22 +1,29 @@
-import { useEffect, useState } from 'react';
-import type { EmailListItem, Tone } from '../types';
+import { useEffect, useMemo, useState } from 'react';
+import type { EmailAttachment, EmailListItem, Tone } from '../types';
 import type { SummaryResponse } from '../types';
-import { api } from '../api';
-import { formatDate, isHtml, resolveBody, sanitizeHtml } from '../utils';
+import { api, attachmentUrl } from '../api';
+import { formatDate, formatFileSize, linkifyText, resolveDetailBody, sanitizeEmailHtml } from '../utils';
 import { Button, IconButton } from './Button';
 import { ScoreChip } from './ScoreChip';
-import { BackIcon, BoltIcon, MailIcon, SparklesIcon } from '../icons';
+import { BackIcon, BoltIcon, MailIcon, PaperclipIcon, SparklesIcon } from '../icons';
 
 // Session cache per account+email so re-selecting an email skips the LLM-backed summary fetch.
 const summaryCache = new Map<string, SummaryResponse>();
 const SUMMARY_CACHE_LIMIT = 100;
+
+interface EmailBody {
+  snippet?: string;
+  text?: string | null;
+  html?: string | null;
+  attachments?: EmailAttachment[];
+}
 
 interface DetailSnapshot {
   emailId: string;
   subject: string;
   from: string;
   date: string;
-  body: string;
+  body: EmailBody | null;
 }
 
 type SummaryState =
@@ -36,18 +43,20 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack }: Deta
   const [snapshot, setSnapshot] = useState<DetailSnapshot | null>(null);
   const [summary, setSummary] = useState<SummaryState | null>(null);
   const [tone, setTone] = useState<Tone>('professional');
+  const [fullEmailOpen, setFullEmailOpen] = useState(false);
 
   useEffect(() => {
     const id = email?.id ?? null;
     setSnapshot(null);
     setSummary(null);
+    setFullEmailOpen(false);
     if (!id) return;
     setSnapshot({
       emailId: id,
       subject: email?.subject ?? '(No subject)',
       from: email?.from ?? '',
       date: email?.date ?? '',
-      body: email?.snippet ?? '',
+      body: email?.snippet ? { snippet: email.snippet } : null,
     });
     setSummary({ emailId: id, status: 'loading' });
 
@@ -60,7 +69,6 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack }: Deta
         if (cancelled) return;
         const fresh = data.email;
         if (fresh) {
-          const body = resolveBody(fresh.body);
           setSnapshot((prev) => {
             if (!prev || prev.emailId !== id) return prev;
             return {
@@ -68,12 +76,7 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack }: Deta
               subject: fresh.subject ?? prev.subject,
               from: fresh.from ?? prev.from,
               date: fresh.date ?? prev.date,
-              body:
-                body === null
-                  ? prev.body
-                  : isHtml(body)
-                    ? sanitizeHtml(body)
-                    : body,
+              body: fresh.body ?? prev.body,
             };
           });
         }
@@ -110,6 +113,37 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack }: Deta
   const activeSnapshot = snapshot && email && snapshot.emailId === email.id ? snapshot : null;
   const activeSummary = summary && email && summary.emailId === email.id ? summary : null;
   const showSummaryLoading = !activeSummary || activeSummary.status === 'loading';
+  const account = accountId ?? '';
+
+  const previewText = useMemo(() => {
+    const raw = activeSnapshot?.body ? resolveDetailBody(activeSnapshot.body) : null;
+    if (!raw) return '';
+    return raw
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .slice(0, 2)
+      .join('\n');
+  }, [activeSnapshot]);
+
+  const cidMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const att of activeSnapshot?.body?.attachments ?? []) {
+      if (att.contentId) map[att.contentId] = attachmentUrl(email?.id ?? '', att, account);
+    }
+    return map;
+  }, [activeSnapshot, email?.id, account]);
+
+  const fullBodyHtml = useMemo(() => {
+    const body = activeSnapshot?.body;
+    if (!body) return '';
+    if (body.html) return sanitizeEmailHtml(body.html, cidMap);
+    const text = body.text ?? body.snippet ?? '';
+    return text ? linkifyText(text) : '';
+  }, [activeSnapshot, cidMap]);
+
+  const attachments = activeSnapshot?.body?.attachments ?? [];
+  const showFullEmail = fullEmailOpen && fullBodyHtml !== '';
 
   return (
     <aside className={`detail-pane${email ? ' is-open' : ''}`} aria-label="Email details">
@@ -157,8 +191,6 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack }: Deta
               )}
             </div>
 
-            <div className="detail-body">{activeSnapshot?.body ?? email.snippet}</div>
-
             <section className="summary-panel" aria-live="polite">
               <h2>
                 <span className="llm-badge">AI</span> Summary
@@ -190,6 +222,60 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack }: Deta
               )}
               {activeSummary?.status === 'unavailable' && (
                 <p className="summary-unavailable">Summary unavailable</p>
+              )}
+            </section>
+
+            <section className="full-email-section">
+              <div className="full-email-header">
+                <h2>Full Email</h2>
+                <button
+                  type="button"
+                  className="full-email-toggle"
+                  aria-expanded={fullEmailOpen}
+                  onClick={() => setFullEmailOpen((open) => !open)}
+                >
+                  {fullEmailOpen ? 'Hide full email' : 'View full email'}
+                </button>
+              </div>
+              {!fullEmailOpen ? (
+                previewText ? (
+                  <p className="full-email-preview">{previewText}</p>
+                ) : (
+                  <p className="full-email-preview is-empty">No preview available</p>
+                )
+              ) : (
+                <div className="full-email-content" aria-label="Full email content">
+                  {showFullEmail ? (
+                    <div className="full-email-body" dangerouslySetInnerHTML={{ __html: fullBodyHtml }} />
+                  ) : (
+                    <p className="full-email-empty">No readable content for this email.</p>
+                  )}
+                  {attachments.length > 0 && (
+                    <ul className="attachment-list">
+                      {attachments.map((att) => (
+                        <li key={att.attachmentId} className="attachment-item">
+                          <span className="attachment-icon" aria-hidden="true">
+                            <PaperclipIcon size={16} />
+                          </span>
+                          <span className="attachment-info">
+                            <span className="attachment-name">{att.filename || 'attachment'}</span>
+                            <span className="attachment-meta">
+                              {formatFileSize(att.size)}
+                              {att.inline ? <span className="attachment-inline-tag">inline</span> : null}
+                            </span>
+                          </span>
+                          <a
+                            className="attachment-download"
+                            href={attachmentUrl(email.id, att, account)}
+                            download={att.filename || true}
+                          >
+                            Download
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               )}
             </section>
 

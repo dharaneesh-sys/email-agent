@@ -51,6 +51,22 @@ export interface EmailsResponse {
   accountId?: string;
 }
 
+export interface EmailAttachment {
+  filename: string;
+  mimeType: string;
+  attachmentId: string;
+  size: number;
+  contentId?: string;
+  inline: boolean;
+}
+
+export interface EmailBody {
+  snippet?: string;
+  text?: string | null;
+  html?: string | null;
+  attachments?: EmailAttachment[];
+}
+
 export interface EmailDetailResponse {
   email?: {
     id: string;
@@ -66,7 +82,7 @@ export interface EmailDetailResponse {
     isUnread?: boolean;
     llmScore?: number;
     llmReason?: string;
-    body?: unknown; // server sends { snippet } — resolved defensively
+    body?: EmailBody;
   };
 }
 
