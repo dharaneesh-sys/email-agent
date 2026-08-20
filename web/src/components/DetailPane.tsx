@@ -5,7 +5,7 @@ import { api, attachmentUrl } from '../api';
 import { formatDate, formatFileSize, linkifyText, resolveDetailBody, sanitizeEmailHtml } from '../utils';
 import { Button, IconButton } from './Button';
 import { ScoreChip } from './ScoreChip';
-import { BackIcon, BoltIcon, MailIcon, PaperclipIcon, SparklesIcon } from '../icons';
+import { BackIcon, BoltIcon, ChevronIcon, MailIcon, PaperclipIcon, SparklesIcon } from '../icons';
 
 // Session cache per account+email so re-selecting an email skips the LLM-backed summary fetch.
 const summaryCache = new Map<string, SummaryResponse>();
@@ -43,6 +43,8 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack }: Deta
   const [snapshot, setSnapshot] = useState<DetailSnapshot | null>(null);
   const [summary, setSummary] = useState<SummaryState | null>(null);
   const [tone, setTone] = useState<Tone>('professional');
+  const [summaryOpen, setSummaryOpen] = useState(true);
+  const [smartReplyOpen, setSmartReplyOpen] = useState(true);
   const [fullEmailOpen, setFullEmailOpen] = useState(false);
 
   useEffect(() => {
@@ -192,49 +194,67 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack }: Deta
             </div>
 
             <section className="summary-panel" aria-live="polite">
-              <h2>
-                <span className="llm-badge">AI</span> Summary
-              </h2>
-              {showSummaryLoading && (
-                <div className="summary-loading">
-                  <span className="skeleton" />
-                  <span className="skeleton" />
-                  <span className="skeleton" />
-                </div>
-              )}
-              {activeSummary?.status === 'ready' && (
-                <>
-                  <p className="summary-text">{activeSummary.summary}</p>
-                  {activeSummary.keyPoints.length > 0 && (
-                    <ul className="key-points">
-                      {activeSummary.keyPoints.map((kp) => (
-                        <li key={kp}>{kp}</li>
-                      ))}
-                    </ul>
-                  )}
-                  {activeSummary.suggestedAction && (
-                    <div className="suggested-action">
-                      <SparklesIcon size={14} />
-                      <span>Suggested: {activeSummary.suggestedAction}</span>
+              <div className="panel-header">
+                <h2>
+                  <span className="llm-badge">AI</span> Summary
+                </h2>
+                <button
+                  type="button"
+                  className="panel-toggle"
+                  aria-expanded={summaryOpen}
+                  aria-controls="summary-content"
+                  onClick={() => setSummaryOpen((open) => !open)}
+                >
+                  <ChevronIcon size={16} className={summaryOpen ? 'is-open' : ''} />
+                  <span className="sr-only">{summaryOpen ? 'Collapse summary' : 'Expand summary'}</span>
+                </button>
+              </div>
+              {summaryOpen && (
+                <div id="summary-content">
+                  {showSummaryLoading && (
+                    <div className="summary-loading">
+                      <span className="skeleton" />
+                      <span className="skeleton" />
+                      <span className="skeleton" />
                     </div>
                   )}
-                </>
-              )}
-              {activeSummary?.status === 'unavailable' && (
-                <p className="summary-unavailable">Summary unavailable</p>
+                  {activeSummary?.status === 'ready' && (
+                    <>
+                      <p className="summary-text">{activeSummary.summary}</p>
+                      {activeSummary.keyPoints.length > 0 && (
+                        <ul className="key-points">
+                          {activeSummary.keyPoints.map((kp) => (
+                            <li key={kp}>{kp}</li>
+                          ))}
+                        </ul>
+                      )}
+                      {activeSummary.suggestedAction && (
+                        <div className="suggested-action">
+                          <SparklesIcon size={14} />
+                          <span>Suggested: {activeSummary.suggestedAction}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {activeSummary?.status === 'unavailable' && (
+                    <p className="summary-unavailable">Summary unavailable</p>
+                  )}
+                </div>
               )}
             </section>
 
             <section className="full-email-section">
-              <div className="full-email-header">
+              <div className="full-email-header panel-header">
                 <h2>Full Email</h2>
                 <button
                   type="button"
-                  className="full-email-toggle"
+                  className="panel-toggle"
                   aria-expanded={fullEmailOpen}
+                  aria-controls="full-email-content"
                   onClick={() => setFullEmailOpen((open) => !open)}
                 >
-                  {fullEmailOpen ? 'Hide full email' : 'View full email'}
+                  <ChevronIcon size={16} className={fullEmailOpen ? 'is-open' : ''} />
+                  <span className="sr-only">{fullEmailOpen ? 'Hide full email' : 'View full email'}</span>
                 </button>
               </div>
               {!fullEmailOpen ? (
@@ -244,7 +264,7 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack }: Deta
                   <p className="full-email-preview is-empty">No preview available</p>
                 )
               ) : (
-                <div className="full-email-content" aria-label="Full email content">
+                <div className="full-email-content" id="full-email-content" aria-label="Full email content">
                   {showFullEmail ? (
                     <div className="full-email-body" dangerouslySetInnerHTML={{ __html: fullBodyHtml }} />
                   ) : (
@@ -280,29 +300,45 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack }: Deta
             </section>
 
             <section className="smart-reply-block">
-              <h2>Smart Reply</h2>
-              <label className="field-label" htmlFor="tone-select">
-                Tone
-              </label>
-              <select
-                id="tone-select"
-                className="tone-select"
-                value={tone}
-                onChange={(e) => setTone(e.target.value as Tone)}
-              >
-                <option value="professional">Professional</option>
-                <option value="friendly">Friendly</option>
-                <option value="concise">Concise</option>
-                <option value="formal">Formal</option>
-              </select>
-              <Button
-                variant="primary"
-                className="draft-btn"
-                disabled={drafting}
-                onClick={() => onDraft(tone)}
-              >
-                {drafting ? 'Drafting…' : 'Draft Reply'}
-              </Button>
+              <div className="panel-header">
+                <h2>Smart Reply</h2>
+                <button
+                  type="button"
+                  className="panel-toggle"
+                  aria-expanded={smartReplyOpen}
+                  aria-controls="smart-reply-content"
+                  onClick={() => setSmartReplyOpen((open) => !open)}
+                >
+                  <ChevronIcon size={16} className={smartReplyOpen ? 'is-open' : ''} />
+                  <span className="sr-only">{smartReplyOpen ? 'Collapse smart reply' : 'Expand smart reply'}</span>
+                </button>
+              </div>
+              {smartReplyOpen && (
+                <div id="smart-reply-content">
+                  <label className="field-label" htmlFor="tone-select">
+                    Tone
+                  </label>
+                  <select
+                    id="tone-select"
+                    className="tone-select"
+                    value={tone}
+                    onChange={(e) => setTone(e.target.value as Tone)}
+                  >
+                    <option value="professional">Professional</option>
+                    <option value="friendly">Friendly</option>
+                    <option value="concise">Concise</option>
+                    <option value="formal">Formal</option>
+                  </select>
+                  <Button
+                    variant="primary"
+                    className="draft-btn"
+                    disabled={drafting}
+                    onClick={() => onDraft(tone)}
+                  >
+                    {drafting ? 'Drafting…' : 'Draft Reply'}
+                  </Button>
+                </div>
+              )}
             </section>
           </div>
         ) : (

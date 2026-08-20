@@ -203,3 +203,11 @@ export function PaperclipIcon(props: IconProps) {
     </IconShell>
   );
 }
+
+export function ChevronIcon(props: IconProps) {
+  return (
+    <IconShell {...props}>
+      <path d="m6 9 6 6 6-6" />
+    </IconShell>
+  );
+}
