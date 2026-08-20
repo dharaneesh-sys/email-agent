@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { EMAIL_ACCOUNTS } from './config';
 import { authManager } from './auth';
-import { gmailService } from './gmail';
+import { gmailService, extractMessageBody } from './gmail';
 import { importanceScorer } from './importance';
 import { llmService } from './llm';
 import type { Email } from './gmail';
@@ -47,6 +47,9 @@ function toEmailLike(email: Email): EmailLike {
     to: headers['to'] || '',
     subject: headers['subject'] || '(No Subject)',
     snippet: email.snippet,
+    // Feed the real decoded body to the LLM prompts, falling back to the
+    // snippet when the message has no extractable plain-text body.
+    body: extractMessageBody(email.payload).text ?? email.snippet,
     date: new Date(parseInt(email.internalDate, 10)).toISOString(),
   }
 }
@@ -246,6 +249,8 @@ app.get('/api/email/:id', async (c) => {
       // ensureImportance never throws — best-effort guard per contract.
     }
 
+    const extracted = extractMessageBody(email.payload);
+
     const emailObj = {
       id: email.id,
       threadId: email.threadId,
@@ -261,7 +266,9 @@ app.get('/api/email/:id', async (c) => {
       isUnread: (email.labelIds || []).includes('UNREAD'),
       body: {
         snippet: email.snippet,
-        // We could extract the full body here if needed
+        text: extracted.text,
+        html: extracted.html,
+        attachments: extracted.attachments,
       }
     };
 
@@ -271,6 +278,31 @@ app.get('/api/email/:id', async (c) => {
   } catch (error) {
     console.error('Error fetching email:', error);
     throw new HTTPException(404, { message: 'Email not found' });
+  }
+});
+
+// Download an attachment's raw bytes for a message
+app.get('/api/email/:id/attachment/:attachmentId', async (c) => {
+  const { id, attachmentId } = c.req.param();
+  const accountId = c.req.query('account') || EMAIL_ACCOUNTS[0].id;
+  const mimeType = c.req.query('mimeType');
+  const filename = c.req.query('filename');
+  const inline = c.req.query('inline');
+
+  if (!EMAIL_ACCOUNTS.some(acc => acc.id === accountId)) {
+    throw new HTTPException(400, { message: 'Invalid account ID' });
+  }
+
+  try {
+    const attachment = await gmailService.getAttachment(accountId, id, attachmentId);
+    const headers = {
+      'Content-Type': mimeType || 'application/octet-stream',
+      'Content-Disposition': inline === '1' ? 'inline' : `attachment; filename="${filename || 'attachment'}"`,
+    };
+    return c.body(Buffer.from(attachment.data, 'base64'), 200, headers);
+  } catch (error) {
+    console.error('Error fetching attachment:', error);
+    throw new HTTPException(404, { message: 'Attachment not found' });
   }
 });
 

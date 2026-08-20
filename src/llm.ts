@@ -20,6 +20,7 @@ export interface EmailLike {
   to: string
   subject: string
   snippet?: string
+  body?: string
   date: string | Date
   isImportant?: boolean
 }
@@ -65,6 +66,8 @@ const TONE_DESCRIPTIONS: Record<Tone, string> = {
 }
 
 function emailBody(email: EmailLike): string {
+  const body = email.body?.trim()
+  if (body !== undefined && body !== '') return body
   return email.snippet ?? ''
 }
 

@@ -39,6 +39,95 @@ export const ThreadSchema = z.object({
 export type Email = z.infer<typeof EmailSchema>;
 export type Thread = z.infer<typeof ThreadSchema>;
 
+// Metadata for a message attachment (or inline image) discovered while
+// walking the payload. `contentId` is only set (and `inline` only true) when
+// the part carries a Content-ID header.
+export interface EmailAttachment {
+  filename: string;
+  mimeType: string;
+  attachmentId: string;
+  size: number;
+  contentId?: string;
+  inline: boolean;
+}
+
+interface MessagePartBodyLike {
+  mimeType?: string | undefined;
+  filename?: string | undefined;
+  headers?: { name: string; value: string }[] | undefined;
+  body?:
+    | { data?: string | undefined; attachmentId?: string | undefined; size?: number | undefined }
+    | null
+    | undefined;
+  parts?: unknown[] | undefined;
+}
+
+/**
+ * Extract the full decoded text/plain and text/html bodies from a Gmail
+ * message payload, plus attachment metadata. Recursively walks
+ * `payload.parts` plus the top-level `payload.body` (non-multipart case).
+ * Concatenates multiple parts of the same type; ignores all other mimeTypes
+ * (multipart/*, image/*, ...) but still recurses into their `parts`. Empty
+ * decoded strings become null. Parts carrying a `body.attachmentId` (other
+ * than text/plain or text/html bodies) become attachments; a Content-ID
+ * header marks them inline with the surrounding angle brackets stripped.
+ */
+export function extractMessageBody(payload: MessagePartBodyLike): {
+  text: string | null;
+  html: string | null;
+  attachments: EmailAttachment[];
+} {
+  let text = '';
+  let html = '';
+  const attachments: EmailAttachment[] = [];
+
+  const decode = (data: string): string => Buffer.from(data, 'base64url').toString('utf-8');
+
+  const walk = (node: MessagePartBodyLike): void => {
+    const mimeType = node.mimeType;
+    const body = node.body;
+    const data = body?.data;
+    if (data) {
+      if (mimeType === 'text/plain') {
+        text += decode(data);
+      } else if (mimeType === 'text/html') {
+        html += decode(data);
+      }
+    }
+    const attachmentId = body?.attachmentId;
+    if (attachmentId && mimeType !== 'text/plain' && mimeType !== 'text/html') {
+      const attachment: EmailAttachment = {
+        filename: node.filename ?? '',
+        mimeType: mimeType ?? '',
+        attachmentId,
+        size: body?.size ?? 0,
+        inline: false,
+      };
+      const contentIdHeader = node.headers?.find(
+        (h) => h.name.toLowerCase() === 'content-id'
+      );
+      if (contentIdHeader) {
+        attachment.contentId = contentIdHeader.value.replace(/^<|>$/g, '');
+        attachment.inline = true;
+      }
+      attachments.push(attachment);
+    }
+    if (Array.isArray(node.parts)) {
+      for (const part of node.parts) {
+        walk(part as MessagePartBodyLike);
+      }
+    }
+  };
+
+  walk(payload);
+
+  return {
+    text: text === '' ? null : text,
+    html: html === '' ? null : html,
+    attachments,
+  };
+}
+
 // Label IDs for common operations
 const LABEL_IDS = {
   INBOX: 'INBOX',
@@ -157,6 +246,27 @@ class GmailService {
     // Validate and parse with Zod
     const parsed = EmailSchema.parse(res.data);
     return parsed;
+  }
+
+  /**
+   * Get an attachment's raw bytes for a message. `data` is standard base64
+   * (not base64url) — decode with Buffer.from(data, 'base64') at the call site.
+   */
+  async getAttachment(
+    accountId: string,
+    messageId: string,
+    attachmentId: string
+  ): Promise<{ data: string; size: number }> {
+    const gmail = await this.getGmail(accountId);
+    const res = await gmail.users.messages.attachments.get({
+      userId: 'me',
+      messageId,
+      id: attachmentId,
+    });
+    return {
+      data: res.data.data ?? '',
+      size: res.data.size ?? 0,
+    };
   }
 
   /**
