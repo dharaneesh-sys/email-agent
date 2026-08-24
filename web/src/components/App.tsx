@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { AccountStatus, EmailAction, EmailListItem, Filter, SnoozeDuration, Tone, ToastVariant } from '../types';
+import type { AccountStatus, EmailAction, EmailListItem, Filter, LabelInfo, SnoozeDuration, Tone, ToastVariant } from '../types';
 import { api } from '../api';
 import { shortenModelName } from '../utils';
 import { NavRail, type NavRailAuth, type NavRailCounts } from './NavRail';
@@ -41,6 +41,10 @@ export function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [bulkSelectedIds, setBulkSelectedIds] = useState<ReadonlySet<string>>(new Set());
+  const [labelList, setLabelList] = useState<LabelInfo[]>([]);
+  const [bulkLabel, setBulkLabel] = useState('');
+  const loadEmailsRef: { current: (() => Promise<void>) | null } = { current: null };
   const [drafting, setDrafting] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -524,6 +528,49 @@ setSearchQuery('');
     [loadStats, notify],
   );
 
+  const toggleBulkSelect = useCallback((email: EmailListItem) => {
+    setBulkSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(email.id)) next.delete(email.id);
+      else next.add(email.id);
+      return next;
+    });
+  }, []);
+
+  const openBulkMode = useCallback(
+    (email: EmailListItem) => {
+      setBulkSelectedIds(new Set([email.id]));
+      void api.labels(currentAccountIdRef.current ?? '').then((d) => {
+        const userLabels = (d.labels ?? []).filter((l) => l.type === 'user');
+        setLabelList(userLabels);
+        if (userLabels[0]) setBulkLabel(userLabels[0].id);
+      }).catch(() => setLabelList([]));
+    },
+    [],
+  );
+
+  const exitBulkMode = useCallback(() => {
+    setBulkSelectedIds(new Set());
+    setBulkLabel('');
+  }, []);
+
+  const applyBulkLabel = useCallback(
+    async (remove: boolean) => {
+      const accountId = currentAccountIdRef.current;
+      if (!accountId || !bulkLabel || bulkSelectedIds.size === 0) return;
+      try {
+        const res = await api.applyLabels([...bulkSelectedIds], remove ? { remove: [bulkLabel] } : { add: [bulkLabel] }, accountId);
+        if (res.failed && res.failed > 0) notify(`${res.failed} of ${res.applied! + res.failed} label updates failed`, 'error');
+        else notify(`Label ${remove ? 'removed from' : 'applied to'} ${res.applied} email${res.applied === 1 ? '' : 's'}`, 'success');
+        exitBulkMode();
+        void loadEmailsRef?.current?.();
+      } catch {
+        notify('Failed to update labels', 'error');
+      }
+    },
+    [bulkLabel, bulkSelectedIds, exitBulkMode, notify],
+  );
+
   // --- Reply / draft flows -------------------------------------------------
 
   const openReply = useCallback((email: EmailListItem) => {
@@ -636,6 +683,9 @@ setSearchQuery('');
   const opsRef = useRef({ loadEmails, loadStats, initAuth, loadConfig });
   useEffect(() => {
     opsRef.current = { loadEmails, loadStats, initAuth, loadConfig };
+  });
+  useEffect(() => {
+    loadEmailsRef.current = () => loadEmails({});
   });
 
   useEffect(() => {
@@ -817,6 +867,32 @@ setSearchQuery('');
               <span>{analyzing ? 'Analyzing…' : 'Analyze'}</span>
             </Button>
           </div>
+          {bulkSelectedIds.size > 0 && (
+            <div className="bulk-bar" role="toolbar" aria-label="Bulk label actions">
+              <span className="bulk-count">{bulkSelectedIds.size} selected</span>
+              <select
+                className="tone-select"
+                value={bulkLabel}
+                onChange={(e) => setBulkLabel(e.target.value)}
+                aria-label="Label to apply"
+              >
+                {labelList.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name ?? l.id}
+                  </option>
+                ))}
+              </select>
+              <Button variant="primary" onClick={() => void applyBulkLabel(false)} disabled={!bulkLabel}>
+                Apply
+              </Button>
+              <Button variant="secondary" onClick={() => void applyBulkLabel(true)} disabled={!bulkLabel}>
+                Remove
+              </Button>
+              <Button variant="ghost" onClick={exitBulkMode}>
+                Cancel
+              </Button>
+            </div>
+          )}
           <div className="workspace" data-split={selectedEmailId ? '' : undefined}>
             <EmailList
               emails={filteredEmails}
@@ -834,6 +910,15 @@ setSearchQuery('');
               onAction={handleAction}
               onReply={openReply}
               onSnooze={handleSnooze}
+              selectionMode={bulkSelectedIds.size > 0}
+              selectedIds={bulkSelectedIds}
+              onToggleSelect={(email) => {
+                if (bulkSelectedIds.size === 0) {
+                  openBulkMode(email);
+                  return;
+                }
+                toggleBulkSelect(email);
+              }}
               onRetry={handleRetry}
               onClearSearch={() => {
                 setSearchQuery('');

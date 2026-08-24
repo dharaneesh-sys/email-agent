@@ -189,3 +189,16 @@ export interface ThreadResponse {
   count?: number;
   messages?: ThreadMessage[];
 }
+
+export interface LabelApplyResponse {
+  success: boolean;
+  applied?: number;
+  failed?: number;
+}
+
+export interface LabelInfo {
+  id: string;
+  name?: string;
+  type?: string;
+  labelListVisibility?: string | null;
+}

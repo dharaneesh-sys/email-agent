@@ -475,6 +475,39 @@ app.post('/api/email/:id/unsnooze', zValidator('json', z.object({
 });
 
 // Get available labels
+// Bulk apply/remove labels
+app.post('/api/labels/apply', zValidator('json', z.object({
+  ids: z.array(z.string()).min(1).max(100),
+  add: z.array(z.string()).max(10).optional(),
+  remove: z.array(z.string()).max(10).optional(),
+  accountId: z.string().optional(),
+})), async (c) => {
+  const { ids, add, remove, accountId: bodyAccountId } = c.req.valid('json');
+  const accountId = bodyAccountId ?? EMAIL_ACCOUNTS[0].id;
+  if (!EMAIL_ACCOUNTS.some((acc) => acc.id === accountId)) {
+    throw new HTTPException(400, { message: 'Invalid account ID' });
+  }
+  if ((!add || add.length === 0) && (!remove || remove.length === 0)) {
+    throw new HTTPException(400, { message: 'Nothing to apply' });
+  }
+  try {
+    const results = await Promise.allSettled(
+      ids.map((id) =>
+        gmailService.modifyLabels(accountId, id, {
+          ...(add && add.length > 0 ? { add } : {}),
+          ...(remove && remove.length > 0 ? { remove } : {}),
+        }),
+      ),
+    );
+    const applied = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.length - applied;
+    return c.json({ success: failed === 0, applied, failed });
+  } catch (error) {
+    console.error('Error applying labels:', error);
+    throw new HTTPException(500, { message: 'Failed to apply labels' });
+  }
+});
+
 app.get('/api/labels', async (c) => {
   const accountId = c.req.query('account') || EMAIL_ACCOUNTS[0].id;
   try {

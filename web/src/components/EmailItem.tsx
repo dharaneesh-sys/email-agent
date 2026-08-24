@@ -27,6 +27,9 @@ interface EmailItemProps {
   onAction(email: EmailListItem, action: EmailAction): void;
   onReply(email: EmailListItem): void;
   onSnooze?: ((email: EmailListItem, duration: SnoozeDuration) => void) | undefined;
+  selectionMode?: boolean;
+  checked?: boolean | undefined;
+  onToggleSelect?: ((email: EmailListItem) => void) | undefined;
 }
 
 const FILTERED_LABELS = new Set(['INBOX', 'UNREAD', 'STARRED', 'IMPORTANT']);
@@ -41,6 +44,9 @@ export const EmailItem = memo(function EmailItem({
   onAction,
   onReply,
   onSnooze,
+  selectionMode = false,
+  checked = false,
+  onToggleSelect,
 }: EmailItemProps) {
   const [snoozeOpen, setSnoozeOpen] = useState(false);
   const snoozeRef = useRef<HTMLDivElement | null>(null);
@@ -101,17 +107,28 @@ export const EmailItem = memo(function EmailItem({
       style={{ animationDelay: `${Math.min(index, 10) * 30}ms` }}
     >
       <span className="row-checkbox-wrap">
-        <input
-          type="checkbox"
-          className="row-checkbox"
-          checked={!email.isUnread}
-          disabled={busy}
-          aria-label={email.isUnread ? 'Mark as read' : 'Mark as unread'}
-          onChange={(e) => {
-            e.stopPropagation();
-            onAction(email, email.isUnread ? 'read' : 'unread');
-          }}
-        />
+        {selectionMode ? (
+          <input
+            type="checkbox"
+            className="row-checkbox"
+            checked={checked}
+            aria-label={`Select ${email.subject || 'email'}`}
+            onClick={(e) => e.stopPropagation()}
+            onChange={() => onToggleSelect?.(email)}
+          />
+        ) : (
+          <input
+            type="checkbox"
+            className="row-checkbox"
+            checked={!email.isUnread}
+            disabled={busy}
+            aria-label={email.isUnread ? 'Mark as read' : 'Mark as unread'}
+            onChange={(e) => {
+              e.stopPropagation();
+              onAction(email, email.isUnread ? 'read' : 'unread');
+            }}
+          />
+        )}
       </span>
 
       <span

@@ -2375,3 +2375,6 @@
 .shortcut-row dt { min-inline-size: 130px; }
 .shortcut-row dd { margin: 0; color: var(--text-secondary); font-size: var(--text-body-sm); }
 .shortcut-list kbd { font-family: var(--font-mono); font-size: var(--text-caption); padding: 2px 8px; border: 1px solid var(--border-default); border-radius: var(--radius-sm); background: var(--surface-secondary); color: var(--text-primary); }
+/* Bulk label bar (3.5) */
+.bulk-bar { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-4); background: var(--accent-muted); border-block: 1px solid var(--border-subtle); }
+.bulk-count { font-size: var(--text-body-sm); font-weight: 600; color: var(--accent-primary); margin-inline-end: auto; }

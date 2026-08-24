@@ -18,6 +18,8 @@ import type {
   ThreadResponse,
   Tone,
   ConfigUpdateResponse,
+  LabelApplyResponse,
+  LabelInfo,
   SnoozeResponse,
   SnoozeDuration,
 } from './types';
@@ -98,6 +100,13 @@ export const api = {
     post<SnoozeResponse>(`/api/email/${encodeURIComponent(id)}/snooze`, { duration, accountId }),
   unsnooze: (id: string, accountId: string) =>
     post<SnoozeResponse>(`/api/email/${encodeURIComponent(id)}/unsnooze`, { accountId }),
+  labels: (account: string) =>
+    get<{ labels?: LabelInfo[] }>(`/api/labels?account=${encodeURIComponent(account)}`),
+  applyLabels: (
+    ids: string[],
+    changes: { add?: string[]; remove?: string[] },
+    accountId: string,
+  ) => post<LabelApplyResponse>('/api/labels/apply', { ids, ...changes, accountId }),
 };
 
 export function attachmentUrl(id: string, attachment: EmailAttachment, account: string): string {

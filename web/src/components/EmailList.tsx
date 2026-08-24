@@ -22,6 +22,9 @@ interface EmailListProps {
   onAction(email: EmailListItem, action: EmailAction): void;
   onReply(email: EmailListItem): void;
   onSnooze?: ((email: EmailListItem, duration: SnoozeDuration) => void) | undefined;
+  selectionMode?: boolean;
+  selectedIds?: ReadonlySet<string>;
+  onToggleSelect?: ((email: EmailListItem) => void) | undefined;
   onRetry(): void;
   onClearSearch(): void;
 }
@@ -42,6 +45,9 @@ export const EmailList = memo(function EmailList({
   onAction,
   onReply,
   onSnooze,
+  selectionMode,
+  selectedIds,
+  onToggleSelect,
   onRetry,
   onClearSearch,
 }: EmailListProps) {
@@ -152,6 +158,9 @@ export const EmailList = memo(function EmailList({
                   onAction={onAction}
                   onReply={onReply}
                   onSnooze={onSnooze}
+                  selectionMode={selectionMode ?? false}
+                  checked={selectedIds?.has(email.id) ?? false}
+                  onToggleSelect={onToggleSelect}
                 />
               </div>
             );

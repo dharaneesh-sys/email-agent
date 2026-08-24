@@ -629,6 +629,25 @@ class GmailService {
   }
 
   /**
+   * Apply/remove labels in bulk for one message.
+   */
+  async modifyLabels(
+    accountId: string,
+    messageId: string,
+    changes: { add?: string[]; remove?: string[] },
+  ): Promise<void> {
+    const gmail = await this.getGmail(accountId);
+    await gmail.users.messages.modify({
+      userId: 'me',
+      id: messageId,
+      requestBody: {
+        ...(changes.add && changes.add.length > 0 ? { addLabelIds: changes.add } : {}),
+        ...(changes.remove && changes.remove.length > 0 ? { removeLabelIds: changes.remove } : {}),
+      },
+    });
+  }
+
+  /**
    * List labels for the account
    */
   async listLabels(accountId: string): Promise<gmail_v1.Schema$Label[]> {
