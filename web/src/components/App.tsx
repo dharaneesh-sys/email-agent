@@ -191,7 +191,12 @@ export function App() {
           );
         }
         if (data.model) setModelName(shortenModelName(data.model));
-        notify(scores.length ? `Analyzed ${scores.length} emails` : 'Importance analysis completed', 'success');
+        const failed = typeof data.failed === 'number' ? data.failed : 0;
+        if (failed > 0 && scores.length > 0) {
+          notify(`${failed} of ${data.requested ?? scores.length + failed} failed to analyze — retry`, 'error');
+        } else {
+          notify(scores.length ? `Analyzed ${scores.length} emails` : 'Importance analysis completed', 'success');
+        }
       } catch {
         if (!isAuto) notify('AI analysis failed', 'error');
       } finally {

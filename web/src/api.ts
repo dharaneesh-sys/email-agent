@@ -17,6 +17,7 @@ import type {
   SummaryResponse,
   ThreadResponse,
   Tone,
+  ConfigUpdateResponse,
   SnoozeResponse,
   SnoozeDuration,
 } from './types';
@@ -91,6 +92,8 @@ export const api = {
       `/api/thread/${encodeURIComponent(threadId)}?account=${encodeURIComponent(account)}`,
     ),
   config: () => get<ConfigResponse>('/api/config'),
+  updateConfig: (settings: { model: string }) =>
+    post<ConfigUpdateResponse>('/api/config', settings),
   snooze: (id: string, duration: SnoozeDuration, accountId: string) =>
     post<SnoozeResponse>(`/api/email/${encodeURIComponent(id)}/snooze`, { duration, accountId }),
   unsnooze: (id: string, accountId: string) =>

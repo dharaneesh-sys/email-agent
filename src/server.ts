@@ -12,6 +12,7 @@ import { authManager } from './auth';
 import { gmailService, extractMessageBody } from './gmail';
 import { importanceScorer } from './importance';
 import { llmService } from './llm';
+import { NIM_EMAIL_CANDIDATES } from './nim';
 import type { Email } from './gmail';
 import type { EmailLike, LlmImportanceResult } from './llm';
 import type { EmailListItem } from './types';
@@ -69,6 +70,21 @@ app.get('/api/config', (c) => {
     defaultModel: info.defaultModel,
     defaultAccount: EMAIL_ACCOUNTS[0].id,
   })
+});
+
+// Persist runtime settings (model switch from the Settings pane)
+app.post('/api/config', zValidator('json', z.object({
+  model: z.string().min(1).optional(),
+})), (c) => {
+  const { model } = c.req.valid('json');
+  if (model) {
+    if (!NIM_EMAIL_CANDIDATES.includes(model)) {
+      throw new HTTPException(400, { message: 'Unknown model' });
+    }
+    llmService.setActiveModel(model);
+  }
+  const info = llmService.getActiveModelInfo();
+  return c.json({ success: true, model: info.model });
 });
 
 // Get authentication status for all accounts
@@ -606,6 +622,9 @@ app.post('/api/importance/refresh', zValidator('json', z.object({
     }));
     return c.json({
       scores,
+      requested: ids.length,
+      scored: scores.length,
+      failed: Math.max(0, ids.length - scores.length),
       model: llmService.getActiveModelInfo().model,
       completed: true,
     });

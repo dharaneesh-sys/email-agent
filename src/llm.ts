@@ -242,6 +242,11 @@ export class LlmService {
     }
   }
 
+  /** Runtime model switch (Settings pane). Null resets to the default chain. */
+  setActiveModel(model: string | null): void {
+    this.activeModel = model !== null && model.trim() !== '' ? model : null
+  }
+
   // Fire-and-forget importance scoring. Never throws.
   enqueueImportance(emails: EmailLike[], accountEmail: string): void {
     if (!this.isEnabled()) return

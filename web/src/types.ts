@@ -111,8 +111,16 @@ export interface ImportanceScore {
 
 export interface ImportanceResponse {
   scores?: ImportanceScore[];
+  requested?: number;
+  scored?: number;
+  failed?: number;
   model?: string;
   completed?: boolean;
+}
+
+export interface ConfigUpdateResponse {
+  success: boolean;
+  model?: string;
 }
 
 export interface ReplyResponse {
