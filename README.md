@@ -48,7 +48,7 @@ bun run scripts/qa/spa_dom_check.ts
 bun run scripts/qa/spa_interact_check.ts
 bun run scripts/qa/spa_modal_check.ts
 
-# Legacy dashboard audits (still served at /dashboard.html during transition)
+# Legacy dashboard audits (archived to legacy/dashboard.html — no longer served)
 bun run scripts/qa/dom_check.ts
 bun run scripts/qa/e2e_check.ts
 bun run scripts/qa/polish_dom_check.ts

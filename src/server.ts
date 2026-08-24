@@ -795,14 +795,6 @@ app.get(
 );
 app.get('/favicon.ico', (c) => c.body(null, 204));
 
-// Legacy: keep dashboard.html reachable for reference/A-B during transition.
-app.get('/dashboard.html', serveStatic({
-  path: './dashboard.html',
-  onFound: (_path, c) => {
-    c.header('Cache-Control', 'no-cache');
-  },
-}));
-
 // Serve static files (dashboard.html, CSS, JS, etc.)
 app.get('/*', serveStatic({ root: './' }));
 
