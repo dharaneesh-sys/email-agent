@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AccountStatus, EmailAction, EmailListItem, Filter, LabelInfo, SnoozeDuration, Tone, ToastVariant } from '../types';
 import { api } from '../api';
 import { shortenModelName } from '../utils';
@@ -6,10 +6,12 @@ import { NavRail, type NavRailAuth, type NavRailCounts } from './NavRail';
 import { SearchField } from './SearchField';
 import { EmailList } from './EmailList';
 import { DetailPane } from './DetailPane';
-import { ReplyModal } from './ReplyModal';
-import { CommandPalette } from './CommandPalette';
-import { ComposeModal } from './ComposeModal';
-import { SettingsPane } from './SettingsPane';
+
+const ReplyModal = lazy(() => import('./ReplyModal').then((m) => ({ default: m.ReplyModal })));
+const CommandPalette = lazy(() => import('./CommandPalette').then((m) => ({ default: m.CommandPalette })));
+const ComposeModal = lazy(() => import('./ComposeModal').then((m) => ({ default: m.ComposeModal })));
+const SettingsPane = lazy(() => import('./SettingsPane').then((m) => ({ default: m.SettingsPane })));
+import { ErrorBoundary } from './ErrorBoundary';
 import { Toast, type ToastState } from './Toast';
 import { Button, IconButton } from './Button';
 import { RefreshIcon, SparklesIcon } from '../icons';
@@ -894,6 +896,7 @@ setSearchQuery('');
             </div>
           )}
           <div className="workspace" data-split={selectedEmailId ? '' : undefined}>
+            <ErrorBoundary>
             <EmailList
               emails={filteredEmails}
               loading={listLoading}
@@ -925,6 +928,8 @@ setSearchQuery('');
                 setCurrentFilter('all');
               }}
             />
+            </ErrorBoundary>
+            <ErrorBoundary>
             <DetailPane
               email={selectedEmail}
               accountId={currentAccountId}
@@ -934,9 +939,11 @@ setSearchQuery('');
               onReply={openReply}
               onSnooze={handleSnooze}
             />
+            </ErrorBoundary>
           </div>
         </div>
       </div>
+      <Suspense fallback={null}>
       <ReplyModal
         email={replyEmail}
         prefill={replyPrefill}
@@ -964,6 +971,7 @@ setSearchQuery('');
         onClose={() => setComposeOpen(false)}
         onSend={sendCompose}
       />
+      </Suspense>
       <SettingsPane
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
