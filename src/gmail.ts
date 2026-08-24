@@ -348,6 +348,17 @@ class GmailService {
     });
   }
 
+  async unarchive(accountId: string, messageId: string): Promise<void> {
+    const gmail = await this.getGmail(accountId);
+    await gmail.users.messages.modify({
+      userId: 'me',
+      id: messageId,
+      requestBody: {
+        addLabelIds: [LABEL_IDS.INBOX],
+      },
+    });
+  }
+
   /**
    * Star message
    */
@@ -410,6 +421,14 @@ class GmailService {
   async trash(accountId: string, messageId: string): Promise<void> {
     const gmail = await this.getGmail(accountId);
     await gmail.users.messages.trash({
+      userId: 'me',
+      id: messageId,
+    });
+  }
+
+  async untrash(accountId: string, messageId: string): Promise<void> {
+    const gmail = await this.getGmail(accountId);
+    await gmail.users.messages.untrash({
       userId: 'me',
       id: messageId,
     });

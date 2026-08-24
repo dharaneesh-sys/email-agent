@@ -1619,6 +1619,35 @@
   animation: toast-out 200ms var(--ease-emphasis) both;
 }
 
+.toast-message {
+  flex: 1;
+}
+
+.toast-action {
+  margin-inline-start: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  min-block-size: 28px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--surface-hover);
+  color: var(--accent-link);
+  font-family: inherit;
+  font-size: var(--text-body-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--duration-micro) ease-out, border-color var(--duration-micro) ease-out;
+}
+
+.toast-action:hover {
+  background: var(--tint-accent);
+  border-color: var(--accent-primary);
+}
+
+.toast-action:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
 *, *::before, *::after {
   scrollbar-width: thin;
   scrollbar-color: var(--surface-elevated) transparent;

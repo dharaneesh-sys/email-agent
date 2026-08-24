@@ -32,6 +32,7 @@ export function App() {
   const [stats, setStats] = useState<{ unread: number | null; important: number | null; total: number | null }>(initialStats);
   const [modelName, setModelName] = useState<string | null>(null);
   const [busyIds, setBusyIds] = useState<ReadonlySet<string>>(new Set());
+  void setBusyIds;
   const [analyzing, setAnalyzing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [replyEmail, setReplyEmail] = useState<EmailListItem | null>(null);
@@ -57,10 +58,10 @@ export function App() {
   // Refs so async callbacks (handleAction, refreshImportance) read fresh state
   // without recreating the callback (keeps EmailList/EmailItem memo effective).
   const busyIdsRef = useRef<ReadonlySet<string>>(new Set());
+  const pendingActionRef = useRef<Set<string>>(new Set());
   const selectedEmailIdRef = useRef<string | null>(null);
   const emailsRef = useRef<EmailListItem[]>([]);
   const filteredEmailsRef = useRef<EmailListItem[]>([]);
-  // In-flight guards — prevent duplicate Analyze / Refresh requests.
   const analyzingRef = useRef(false);
   const refreshingRef = useRef(false);
   // Monotonic load sequence — discards responses superseded by a newer fetch
@@ -83,18 +84,25 @@ export function App() {
 
   // --- Toast ---------------------------------------------------------------
 
-  const notify = useCallback((message: string, variant: ToastVariant = 'info') => {
-    toastId.current += 1;
-    setToast({ id: toastId.current, message, variant, leaving: false });
-    if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => {
-      setToast((prev) => (prev ? { ...prev, leaving: true } : prev));
-      toastTimer.current = window.setTimeout(
-        () => setToast((prev) => (prev && prev.leaving ? null : prev)),
-        200,
-      );
-    }, 2800);
-  }, []);
+  const notify = useCallback(
+    (message: string, variant: ToastVariant = 'info', opts?: { actionLabel?: string; onAction?: () => void; durationMs?: number }) => {
+      toastId.current += 1;
+      const duration = opts?.durationMs ?? 2800;
+      const next: ToastState = { id: toastId.current, message, variant, leaving: false };
+      if (opts?.actionLabel !== undefined) next.actionLabel = opts.actionLabel;
+      if (opts?.onAction !== undefined) next.onAction = opts.onAction;
+      setToast(next);
+      if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
+      toastTimer.current = window.setTimeout(() => {
+        setToast((prev) => (prev ? { ...prev, leaving: true } : prev));
+        toastTimer.current = window.setTimeout(
+          () => setToast((prev) => (prev && prev.leaving ? null : prev)),
+          200,
+        );
+      }, duration);
+    },
+    [],
+  );
 
   useEffect(() => {
     return () => {
@@ -354,6 +362,12 @@ setSearchQuery('');
       case 'archive':
       case 'trash':
         return { ...email, labels: email.labels.filter((l) => l !== 'INBOX') };
+      case 'unarchive':
+      case 'untrash':
+        return {
+          ...email,
+          labels: email.labels.includes('INBOX') ? email.labels : [...email.labels.filter((l) => l !== 'TRASH'), 'INBOX'],
+        };
       case 'important':
         return { ...email, isImportant: true };
       case 'unimportant':
@@ -361,43 +375,118 @@ setSearchQuery('');
     }
   }, []);
 
+  const INVERSE_ACTION: Record<EmailAction, EmailAction | null> = {
+    read: 'unread',
+    unread: 'read',
+    star: 'unstar',
+    unstar: 'star',
+    archive: 'unarchive',
+    unarchive: 'archive',
+    important: 'unimportant',
+    unimportant: 'important',
+    trash: 'untrash',
+    untrash: 'trash',
+  };
+
   const ACTION_LABELS: Record<EmailAction, string> = {
     read: 'marked as read',
     unread: 'marked as unread',
     star: 'starred',
     unstar: 'unstarred',
     archive: 'archived',
+    unarchive: 'unarchived',
     important: 'marked as important',
     unimportant: 'marked as not important',
     trash: 'moved to trash',
+    untrash: 'restored from trash',
   };
 
   const handleAction = useCallback(
     async (email: EmailListItem, action: EmailAction) => {
-      if (!currentAccountId || busyIdsRef.current.has(email.id)) return;
-      setBusyIds((prev) => new Set(prev).add(email.id));
-      try {
-        const data = await api.action(email.id, action, currentAccountId);
-        if (!data.success) throw new Error('Action failed');
-        setEmails((prev) =>
-          action === 'trash'
-            ? prev.filter((e) => e.id !== email.id)
-            : prev.map((e) => (e.id === email.id ? applyLocalAction(e, action) : e)),
-        );
-        if (action === 'trash' && selectedEmailIdRef.current === email.id) setSelectedEmailId(null);
-        void loadStats();
+      const accountId = currentAccountIdRef.current;
+      if (!accountId) return;
+      if (pendingActionRef.current.has(email.id)) return;
+      pendingActionRef.current.add(email.id);
+      const snapshot = emailsRef.current.slice();
+      const snapshotSelected = selectedEmailIdRef.current;
+      const inverse = INVERSE_ACTION[action];
+      const hasUndo = inverse !== null;
+
+      // optimistic patch — instant feedback without busy overlay
+      setEmails((prev) =>
+        action === 'trash' ? prev.filter((e) => e.id !== email.id) : prev.map((e) => (e.id === email.id ? applyLocalAction(e, action) : e)),
+      );
+      if (action === 'trash' && snapshotSelected === email.id) setSelectedEmailId(null);
+
+      let undone = false;
+
+      const handleUndo = () => {
+        if (undone) return;
+        undone = true;
+        // restore snapshot immediately
+        setEmails(snapshot);
+        setSelectedEmailId(snapshotSelected);
+        // dismiss current toast (replace with leaving then clear)
+        setToast((prev) => (prev ? { ...prev, leaving: true } : prev));
+        window.setTimeout(() => setToast((prev) => (prev && prev.leaving ? null : prev)), 200);
+        if (toastTimer.current !== null) {
+          window.clearTimeout(toastTimer.current);
+          toastTimer.current = null;
+        }
+        if (inverse && currentAccountIdRef.current) {
+          const undoAccount = currentAccountIdRef.current;
+          void api
+            .action(email.id, inverse, undoAccount)
+            .then((d) => {
+              if (!d.success) throw new Error('Undo failed');
+              notify('Undone', 'success');
+              void loadStats();
+            })
+            .catch(() => {
+              // rollback undo: re-apply original optimistic patch
+              setEmails((prev) =>
+                action === 'trash'
+                  ? prev.filter((e) => e.id !== email.id)
+                  : prev.map((e) => (e.id === email.id ? applyLocalAction(e, action) : e)),
+              );
+              if (action === 'trash' && snapshotSelected === email.id) setSelectedEmailId(null);
+              notify('Undo failed', 'error');
+            })
+            .finally(() => {
+              pendingActionRef.current.delete(email.id);
+            });
+        } else {
+          pendingActionRef.current.delete(email.id);
+          notify('Undone', 'success');
+        }
+      };
+
+      if (hasUndo) {
+        notify(`Email ${ACTION_LABELS[action]}`, 'success', {
+          actionLabel: 'Undo',
+          onAction: handleUndo,
+          durationMs: 5000,
+        });
+      } else {
         notify(`Email ${ACTION_LABELS[action]}`, 'success');
+      }
+
+      try {
+        const data = await api.action(email.id, action, accountId);
+        if (undone) return;
+        if (!data.success) throw new Error('Action failed');
+        void loadStats();
       } catch {
+        if (undone) return;
+        // rollback: restore snapshot + error toast
+        setEmails(snapshot);
+        setSelectedEmailId(snapshotSelected);
         notify('Action failed', 'error');
       } finally {
-        setBusyIds((prev) => {
-          const next = new Set(prev);
-          next.delete(email.id);
-          return next;
-        });
+        if (!undone) pendingActionRef.current.delete(email.id);
       }
     },
-    [currentAccountId, applyLocalAction, loadStats, notify],
+    [applyLocalAction, loadStats, notify],
   );
 
   // --- Reply / draft flows -------------------------------------------------

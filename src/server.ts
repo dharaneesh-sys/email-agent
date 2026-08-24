@@ -348,7 +348,7 @@ app.get('/api/email/:id/attachment/:attachmentId', async (c) => {
 
 // Perform action on an email
 app.post('/api/email/:id/action', zValidator('json', z.object({
-  action: z.enum(['read', 'unread', 'star', 'unstar', 'archive', 'important', 'unimportant', 'trash']),
+  action: z.enum(['read', 'unread', 'star', 'unstar', 'archive', 'unarchive', 'important', 'unimportant', 'trash', 'untrash']),
   accountId: z.string().optional(),
 })), async (c) => {
   const { id } = c.req.param();
@@ -381,6 +381,10 @@ app.post('/api/email/:id/action', zValidator('json', z.object({
         await gmailService.archive(accountId, id);
         success = true;
         break;
+      case 'unarchive':
+        await gmailService.unarchive(accountId, id);
+        success = true;
+        break;
       case 'important':
         await gmailService.markImportant(accountId, id);
         success = true;
@@ -391,6 +395,10 @@ app.post('/api/email/:id/action', zValidator('json', z.object({
         break;
       case 'trash':
         await gmailService.trash(accountId, id);
+        success = true;
+        break;
+      case 'untrash':
+        await gmailService.untrash(accountId, id);
         success = true;
         break;
     }

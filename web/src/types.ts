@@ -146,9 +146,11 @@ export type EmailAction =
   | 'star'
   | 'unstar'
   | 'archive'
+  | 'unarchive'
   | 'important'
   | 'unimportant'
-  | 'trash';
+  | 'trash'
+  | 'untrash';
 
 export type ToastVariant = 'info' | 'success' | 'error';
 

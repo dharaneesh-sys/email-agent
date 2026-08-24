@@ -8,6 +8,8 @@ export interface ToastState {
   message: string;
   variant: ToastVariant;
   leaving: boolean;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 const TOAST_ICONS = {
@@ -23,16 +25,28 @@ export function Toast({ toast }: { toast: ToastState | null }) {
     <div
       className="toast-region"
       role={isError ? 'alert' : 'status'}
-      aria-live="polite"
+      aria-live={isError ? 'assertive' : 'polite'}
       aria-atomic="true"
     >
       {toast && Icon && (
         <div
           key={toast.id}
           className={`toast toast-${toast.variant}${toast.leaving ? ' toast-leaving' : ''}`}
+          role="alert"
+          aria-live="polite"
         >
           <Icon size={18} />
-          <span>{toast.message}</span>
+          <span className="toast-message">{toast.message}</span>
+          {toast.actionLabel && toast.onAction && (
+            <button
+              type="button"
+              className="toast-action"
+              onClick={toast.onAction}
+              aria-label={toast.actionLabel}
+            >
+              {toast.actionLabel}
+            </button>
+          )}
         </div>
       )}
     </div>
