@@ -9,6 +9,7 @@ import { DetailPane } from './DetailPane';
 import { ReplyModal } from './ReplyModal';
 import { CommandPalette } from './CommandPalette';
 import { ComposeModal } from './ComposeModal';
+import { SettingsPane } from './SettingsPane';
 import { Toast, type ToastState } from './Toast';
 import { Button, IconButton } from './Button';
 import { RefreshIcon, SparklesIcon } from '../icons';
@@ -39,6 +40,7 @@ export function App() {
   const [replyPrefill, setReplyPrefill] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [drafting, setDrafting] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -680,6 +682,10 @@ setSearchQuery('');
           setComposeOpen(false);
           return;
         }
+        if (settingsOpen) {
+          setSettingsOpen(false);
+          return;
+        }
         if (replyEmail) {
           setReplyEmail(null);
           return;
@@ -719,6 +725,11 @@ setSearchQuery('');
         setComposeOpen(true);
         return;
       }
+      if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setSettingsOpen(true);
+        return;
+      }
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         if (filteredEmails.length === 0) return;
         e.preventDefault();
@@ -731,7 +742,7 @@ setSearchQuery('');
         if (item) setSelectedEmailId(item.id);
       }
     },
-    [paletteOpen, replyEmail, composeOpen, selectedEmailId, searchQuery, filteredEmails, emails, openReply],
+    [paletteOpen, replyEmail, composeOpen, settingsOpen, selectedEmailId, searchQuery, filteredEmails, emails, openReply],
   );
 
   useEffect(() => {
@@ -867,6 +878,12 @@ setSearchQuery('');
         accountId={currentAccountId}
         onClose={() => setComposeOpen(false)}
         onSend={sendCompose}
+      />
+      <SettingsPane
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        currentModel={modelName}
+        onModelChanged={(m) => setModelName(shortenModelName(m))}
       />
       <Toast toast={toast} />
     </div>

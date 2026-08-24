@@ -182,3 +182,17 @@ export function removeSearchOperator(query: string, target: SearchOperator): str
     .replace(new RegExp(`(?<![\\w"])${bare.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w"])`, 'ig'), '');
   return next.replace(/\s{2,}/g, ' ').trim();
 }
+
+/**
+ * Known-good NIM model candidates (mirrors src/nim.ts NIM_EMAIL_CANDIDATES).
+ * Kept client-side so the Settings pane can offer the list without an
+ * extra endpoint.
+ */
+export const NIM_MODEL_CANDIDATES: readonly string[] = [
+  'meta/llama-3.1-8b-instruct',
+  'meta/llama-3.1-70b-instruct',
+  'meta/llama-3.2-3b-instruct',
+  'nvidia/llama-3.3-nemotron-super-49b-v1',
+  'nvidia/nemotron-3-nano-30b-a3b',
+  'nvidia/nemotron-mini-4b-instruct',
+];

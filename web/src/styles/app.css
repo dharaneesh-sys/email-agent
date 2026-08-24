@@ -2362,3 +2362,16 @@
 .attachment-lightbox-img { max-width: 90vw; max-height: 85vh; display: block; }
 .attachment-lightbox-pdf { width: 80vw; height: 85vh; border: 0; }
 .attachment-lightbox-close { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border-radius: 50%; border: 0; background: var(--surface-elevated); color: var(--text-primary); font-size: 20px; cursor: pointer; }
+/* Settings pane (3.6) */
+.settings-pane { inline-size: min(520px, calc(100vw - 32px)); max-block-size: 80dvb; display: flex; flex-direction: column; background: var(--surface-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-lg); box-shadow: var(--shadow-modal); overflow: hidden; }
+.settings-body { flex: 1; overflow-y: auto; padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-6); min-height: 0; }
+.settings-section h3 { margin: 0 0 var(--space-2); font-size: var(--text-overline); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
+.theme-toggle { display: inline-flex; border: 1px solid var(--border-default); border-radius: var(--radius-pill); overflow: hidden; }
+.theme-option { padding: var(--space-2) var(--space-4); min-block-size: 36px; border: none; background: transparent; color: var(--text-secondary); font-family: inherit; font-size: var(--text-body-sm); cursor: pointer; transition: background var(--duration-micro) ease-out, color var(--duration-micro) ease-out; }
+.theme-option + .theme-option { border-inline-start: 1px solid var(--border-default); }
+.theme-option.is-active { background: var(--accent-muted); color: var(--accent-primary); font-weight: 600; }
+.shortcut-list { margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.shortcut-row { display: flex; align-items: center; gap: var(--space-3); }
+.shortcut-row dt { min-inline-size: 130px; }
+.shortcut-row dd { margin: 0; color: var(--text-secondary); font-size: var(--text-body-sm); }
+.shortcut-list kbd { font-family: var(--font-mono); font-size: var(--text-caption); padding: 2px 8px; border: 1px solid var(--border-default); border-radius: var(--radius-sm); background: var(--surface-secondary); color: var(--text-primary); }
