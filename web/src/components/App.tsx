@@ -641,10 +641,15 @@ export function App() {
               analyzing={analyzing}
               busyIds={busyIds}
               listRef={listRef}
+              searchActive={searchQuery.trim().length > 0 || currentFilter !== 'all'}
               onSelect={openDetail}
               onAction={handleAction}
               onReply={openReply}
               onRetry={handleRetry}
+              onClearSearch={() => {
+                setSearchQuery('');
+                setCurrentFilter('all');
+              }}
             />
             <DetailPane
               email={selectedEmail}

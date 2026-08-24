@@ -5,7 +5,6 @@ import type { EmailAction, EmailListItem } from '../types';
 import { Button } from './Button';
 import { EmailItem } from './EmailItem';
 import { SkeletonRow } from './SkeletonRow';
-import { AlertTriangleIcon, MailIcon } from '../icons';
 
 interface EmailListProps {
   emails: EmailListItem[];
@@ -16,10 +15,12 @@ interface EmailListProps {
   analyzing: boolean;
   busyIds: ReadonlySet<string>;
   listRef: RefObject<HTMLElement | null>;
+  searchActive: boolean;
   onSelect(email: EmailListItem): void;
   onAction(email: EmailListItem, action: EmailAction): void;
   onReply(email: EmailListItem): void;
   onRetry(): void;
+  onClearSearch(): void;
 }
 
 export const EmailList = memo(function EmailList({
@@ -31,10 +32,12 @@ export const EmailList = memo(function EmailList({
   analyzing,
   busyIds,
   listRef,
+  searchActive,
   onSelect,
   onAction,
   onReply,
   onRetry,
+  onClearSearch,
 }: EmailListProps) {
   const virtualizer = useVirtualizer({
     count: emails.length,
@@ -48,8 +51,9 @@ export const EmailList = memo(function EmailList({
   if (noAccount) {
     content = (
       <div className="list-state">
-        <MailIcon size={44} className="list-state-icon" />
-        <p>Please connect your email account</p>
+        <span className="list-state-ring" aria-hidden="true" />
+        <p className="list-state-title">Connect an account</p>
+        <p className="list-state-hint">Sign in from the sidebar to load your inbox.</p>
       </div>
     );
   } else if (loading && emails.length === 0) {
@@ -63,18 +67,29 @@ export const EmailList = memo(function EmailList({
   } else if (error) {
     content = (
       <div className="list-state">
-        <AlertTriangleIcon size={44} className="list-state-icon" />
-        <p>Failed to load emails. Please try again.</p>
+        <span className="list-state-ring is-error" aria-hidden="true" />
+        <p className="list-state-title">Couldn't load emails</p>
+        <p className="list-state-hint">The request failed. Check your connection and try again.</p>
         <Button variant="secondary" onClick={onRetry}>
           Retry
         </Button>
       </div>
     );
   } else if (emails.length === 0) {
-    content = (
+    content = searchActive ? (
       <div className="list-state">
-        <MailIcon size={44} className="list-state-icon" />
-        <p>No emails match your filters</p>
+        <span className="list-state-ring" aria-hidden="true" />
+        <p className="list-state-title">No results</p>
+        <p className="list-state-hint">Nothing matches your search or filters.</p>
+        <Button variant="secondary" onClick={onClearSearch}>
+          Clear search
+        </Button>
+      </div>
+    ) : (
+      <div className="list-state">
+        <span className="list-state-ring" aria-hidden="true" />
+        <p className="list-state-title">Inbox zero</p>
+        <p className="list-state-hint">No emails match your current filters.</p>
       </div>
     );
   } else {
