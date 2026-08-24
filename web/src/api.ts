@@ -15,6 +15,7 @@ import type {
   SignoutResponse,
   StatsResponse,
   SummaryResponse,
+  ThreadResponse,
   Tone,
 } from './types';
 
@@ -82,6 +83,10 @@ export const api = {
     }),
   compose: (message: { to: string; cc?: string; bcc?: string; subject: string; body: string }, accountId: string) =>
     post<ReplyResponse>('/api/email/compose', { ...message, accountId }),
+  thread: (threadId: string, account: string) =>
+    get<ThreadResponse>(
+      `/api/thread/${encodeURIComponent(threadId)}?account=${encodeURIComponent(account)}`,
+    ),
   config: () => get<ConfigResponse>('/api/config'),
 };
 

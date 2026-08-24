@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { EmailAttachment, EmailListItem, Tone } from '../types';
-import type { SummaryResponse } from '../types';
+import type { SummaryResponse, ThreadMessage } from '../types';
 import { api, attachmentUrl } from '../api';
 import { formatDate, formatFileSize, linkifyText, resolveDetailBody, sanitizeEmailHtml } from '../utils';
 import { Button, IconButton } from './Button';
 import { ScoreChip } from './ScoreChip';
+import { ThreadStack } from './ThreadStack';
 import { BackIcon, BoltIcon, ChevronIcon, MailIcon, PaperclipIcon, SparklesIcon } from '../icons';
 
 // Session cache per account+email so re-selecting an email skips the LLM-backed summary fetch.
@@ -93,9 +94,10 @@ interface DetailPaneProps {
   drafting: boolean;
   onDraft(tone: Tone): void;
   onBack(): void;
+  onReply(email: EmailListItem): void;
 }
 
-export function DetailPane({ email, accountId, drafting, onDraft, onBack }: DetailPaneProps) {
+export function DetailPane({ email, accountId, drafting, onDraft, onBack, onReply }: DetailPaneProps) {
   const [snapshot, setSnapshot] = useState<DetailSnapshot | null>(null);
   const [summary, setSummary] = useState<SummaryState | null>(null);
   const [tone, setTone] = useState<Tone>('professional');
@@ -103,12 +105,14 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack }: Deta
   const [smartReplyOpen, setSmartReplyOpen] = useState(true);
   const [fullEmailOpen, setFullEmailOpen] = useState(false);
   const [bodyModePref, setBodyModePref] = useState<'html' | 'text'>('html');
+  const [threadCount, setThreadCount] = useState(0);
 
   useEffect(() => {
     const id = email?.id ?? null;
     setSnapshot(null);
     setSummary(null);
     setFullEmailOpen(false);
+    setThreadCount(0);
     if (!id) return;
     setSnapshot({
       emailId: id,
@@ -325,7 +329,31 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack }: Deta
               )}
             </section>
 
-            <section className="full-email-section">
+            {email?.threadId && (
+              <ThreadStack
+                threadId={email.threadId}
+                accountId={accountId}
+                onCount={setThreadCount}
+                onReply={(msg: ThreadMessage) => {
+                  const mapped: EmailListItem = {
+                    id: msg.id,
+                    threadId: msg.threadId ?? email.threadId ?? '',
+                    snippet: msg.snippet ?? '',
+                    from: msg.from ?? 'Unknown',
+                    subject: msg.subject ?? '(No Subject)',
+                    date: msg.date ?? '',
+                    importanceScore: 0,
+                    isImportant: false,
+                    labels: msg.labels ?? [],
+                    isUnread: msg.isUnread ?? false,
+                  };
+                  onReply(mapped);
+                }}
+              />
+            )}
+
+            {threadCount <= 1 && (
+              <section className="full-email-section">
               <div className="full-email-header panel-header">
                 <h2>Full Email</h2>
                 <div className="body-mode-toggle" role="group" aria-label="Body format">
@@ -396,7 +424,8 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack }: Deta
                   )}
                 </div>
               )}
-            </section>
+              </section>
+            )}
 
             <section className="smart-reply-block">
               <div className="panel-header">

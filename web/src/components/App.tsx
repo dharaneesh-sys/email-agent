@@ -684,6 +684,7 @@ export function App() {
               drafting={drafting}
               onDraft={(tone) => void draftReply(tone)}
               onBack={() => setSelectedEmailId(null)}
+              onReply={openReply}
             />
           </div>
         </div>

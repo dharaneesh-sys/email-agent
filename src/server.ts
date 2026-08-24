@@ -282,6 +282,42 @@ app.get('/api/email/:id', async (c) => {
   }
 });
 
+// Get a full conversation thread (all messages, oldest first)
+app.get('/api/thread/:threadId', async (c) => {
+  const { threadId } = c.req.param();
+  const accountId = c.req.query('account') || EMAIL_ACCOUNTS[0].id;
+
+  try {
+    const thread = await gmailService.getThread(accountId, threadId);
+    const messages = thread.messages.map((email) => {
+      const headers = Object.fromEntries(
+        email.payload.headers.map(h => [h.name.toLowerCase(), h.value])
+      );
+      const extracted = extractMessageBody(email.payload);
+      return {
+        id: email.id,
+        threadId: email.threadId,
+        snippet: email.snippet,
+        subject: headers['subject'] || '(No Subject)',
+        from: headers['from'] || 'Unknown',
+        to: headers['to'] || '',
+        date: new Date(parseInt(email.internalDate, 10)).toISOString(),
+        labels: email.labelIds || [],
+        isUnread: (email.labelIds || []).includes('UNREAD'),
+        body: {
+          snippet: email.snippet,
+          text: extracted.text,
+          html: extracted.html,
+          attachments: extracted.attachments,
+        },
+      };
+    });
+    return c.json({ threadId, count: messages.length, messages });
+  } catch (error) {
+    console.error('Error fetching thread:', error);
+    throw new HTTPException(404, { message: 'Thread not found' });
+  }
+});
 // Download an attachment's raw bytes for a message
 app.get('/api/email/:id/attachment/:attachmentId', async (c) => {
   const { id, attachmentId } = c.req.param();

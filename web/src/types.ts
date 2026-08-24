@@ -150,3 +150,22 @@ export type EmailAction =
   | 'trash';
 
 export type ToastVariant = 'info' | 'success' | 'error';
+
+export interface ThreadMessage {
+  id: string;
+  threadId?: string;
+  snippet?: string;
+  subject?: string;
+  from?: string;
+  to?: string;
+  date?: string;
+  labels?: string[];
+  isUnread?: boolean;
+  body?: EmailBody;
+}
+
+export interface ThreadResponse {
+  threadId: string;
+  count?: number;
+  messages?: ThreadMessage[];
+}

@@ -2312,3 +2312,17 @@
   color: var(--text-tertiary);
   font-size: var(--text-caption);
 }
+
+/* Thread stack (2.1) */
+.thread-stack { border-top: 1px solid var(--border-subtle); padding-top: var(--space-4); margin-top: var(--space-4); }
+.thread-count { font-size: var(--text-caption); color: var(--text-tertiary); margin-left: auto; }
+.thread-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.thread-msg { border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); overflow: hidden; }
+.thread-msg-header { width: 100%; display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); background: var(--surface-secondary); border: 0; cursor: pointer; text-align: left; }
+.thread-msg-from { font-weight: 600; font-size: var(--text-body-sm); color: var(--text-primary); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.thread-msg-date { font-size: var(--text-caption); color: var(--text-tertiary); white-space: nowrap; }
+.thread-msg-content { padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); }
+.thread-msg-body { font-size: var(--text-body); line-height: 1.6; max-width: 65ch; word-break: break-word; }
+.thread-msg-body.is-text { white-space: pre-wrap; }
+.thread-msg-body a { color: var(--accent-link); }
+.thread-msg-empty { color: var(--text-tertiary); font-size: var(--text-body-sm); }
