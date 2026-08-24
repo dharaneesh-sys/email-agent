@@ -2326,3 +2326,10 @@
 .thread-msg-body.is-text { white-space: pre-wrap; }
 .thread-msg-body a { color: var(--accent-link); }
 .thread-msg-empty { color: var(--text-tertiary); font-size: var(--text-body-sm); }
+/* Attachment preview (2.5) */
+.attachment-preview-btn { margin-left: var(--space-2); font-size: var(--text-caption); padding: 2px 8px; border-radius: var(--radius-pill); border: 1px solid var(--border-default); background: var(--surface-elevated); color: var(--text-primary); cursor: pointer; }
+.attachment-lightbox-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 50; }
+.attachment-lightbox { position: relative; max-width: 90vw; max-height: 90vh; background: var(--surface-primary); border-radius: var(--radius-lg); overflow: hidden; }
+.attachment-lightbox-img { max-width: 90vw; max-height: 85vh; display: block; }
+.attachment-lightbox-pdf { width: 80vw; height: 85vh; border: 0; }
+.attachment-lightbox-close { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border-radius: 50%; border: 0; background: var(--surface-elevated); color: var(--text-primary); font-size: 20px; cursor: pointer; }

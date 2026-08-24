@@ -104,8 +104,9 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack, onRepl
   const [summaryOpen, setSummaryOpen] = useState(true);
   const [smartReplyOpen, setSmartReplyOpen] = useState(true);
   const [fullEmailOpen, setFullEmailOpen] = useState(false);
-  const [bodyModePref, setBodyModePref] = useState<'html' | 'text'>('html');
   const [threadCount, setThreadCount] = useState(0);
+  const [preview, setPreview] = useState<EmailAttachment | null>(null);
+  const [bodyModePref, setBodyModePref] = useState<'html' | 'text'>('html');
 
   useEffect(() => {
     const id = email?.id ?? null;
@@ -399,27 +400,37 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack, onRepl
                   )}
                   {attachments.length > 0 && (
                     <ul className="attachment-list">
-                      {attachments.map((att) => (
-                        <li key={att.attachmentId} className="attachment-item">
-                          <span className="attachment-icon" aria-hidden="true">
-                            <PaperclipIcon size={16} />
-                          </span>
-                          <span className="attachment-info">
-                            <span className="attachment-name">{att.filename || 'attachment'}</span>
-                            <span className="attachment-meta">
-                              {formatFileSize(att.size)}
-                              {att.inline ? <span className="attachment-inline-tag">inline</span> : null}
+                      {attachments.map((att) => {
+                        const isImage = att.mimeType.startsWith('image/');
+                        const isPdf = att.mimeType === 'application/pdf';
+                        const canPreview = isImage || isPdf;
+                        return (
+                          <li key={att.attachmentId} className="attachment-item">
+                            <span className="attachment-icon" aria-hidden="true">
+                              <PaperclipIcon size={16} />
                             </span>
-                          </span>
-                          <a
-                            className="attachment-download"
-                            href={attachmentUrl(email.id, att, account)}
-                            download={att.filename || true}
-                          >
-                            Download
-                          </a>
-                        </li>
-                      ))}
+                            <span className="attachment-info">
+                              <span className="attachment-name">{att.filename || 'attachment'}</span>
+                              <span className="attachment-meta">
+                                {formatFileSize(att.size)}
+                                {att.inline ? <span className="attachment-inline-tag">inline</span> : null}
+                              </span>
+                            </span>
+                            {canPreview && (
+                              <button type="button" className="attachment-preview-btn" onClick={() => setPreview(att)}>
+                                Preview
+                              </button>
+                            )}
+                            <a
+                              className="attachment-download"
+                              href={attachmentUrl(email.id, att, account)}
+                              download={att.filename || true}
+                            >
+                              Download
+                            </a>
+                          </li>
+                        );
+                      })}
                     </ul>
                   )}
                 </div>
@@ -476,6 +487,40 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack, onRepl
           </div>
         )}
       </div>
+      {preview && email && (
+        <div
+          className="attachment-lightbox-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Attachment preview"
+          onClick={() => setPreview(null)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setPreview(null);
+          }}
+          tabIndex={-1}
+          ref={(el) => el?.focus()}
+        >
+          <div className="attachment-lightbox" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="attachment-lightbox-close" onClick={() => setPreview(null)} aria-label="Close preview">
+              ×
+            </button>
+            {preview.mimeType.startsWith('image/') ? (
+              <img
+                className="attachment-lightbox-img"
+                src={attachmentUrl(email.id, preview, account)}
+                alt={preview.filename || 'attachment'}
+              />
+            ) : (
+              <iframe
+                className="attachment-lightbox-pdf"
+                src={attachmentUrl(email.id, preview, account)}
+                title={preview.filename || 'PDF preview'}
+                sandbox="allow-same-origin"
+              />
+            )}
+          </div>
+        </div>
+      )}
     </aside>
   );
 }
