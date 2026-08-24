@@ -7,6 +7,7 @@ import { SearchField } from './SearchField';
 import { EmailList } from './EmailList';
 import { DetailPane } from './DetailPane';
 import { ReplyModal } from './ReplyModal';
+import { CommandPalette } from './CommandPalette';
 import { Toast, type ToastState } from './Toast';
 import { Button, IconButton } from './Button';
 import { RefreshIcon, SparklesIcon } from '../icons';
@@ -34,6 +35,7 @@ export function App() {
   const [refreshing, setRefreshing] = useState(false);
   const [replyEmail, setReplyEmail] = useState<EmailListItem | null>(null);
   const [replyPrefill, setReplyPrefill] = useState<string | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [drafting, setDrafting] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
 
@@ -485,6 +487,10 @@ export function App() {
         tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable === true;
 
       if (e.key === 'Escape') {
+        if (paletteOpen) {
+          setPaletteOpen(false);
+          return;
+        }
         if (replyEmail) {
           setReplyEmail(null);
           return;
@@ -497,6 +503,11 @@ export function App() {
           setSearchQuery('');
           searchRef.current?.blur();
         }
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
         return;
       }
       if (isFormField) return;
@@ -526,7 +537,7 @@ export function App() {
         if (item) setSelectedEmailId(item.id);
       }
     },
-    [replyEmail, selectedEmailId, searchQuery, filteredEmails, emails, openReply],
+    [paletteOpen, replyEmail, selectedEmailId, searchQuery, filteredEmails, emails, openReply],
   );
 
   useEffect(() => {
@@ -628,6 +639,21 @@ export function App() {
         prefill={replyPrefill}
         onClose={() => setReplyEmail(null)}
         onSend={sendReply}
+      />
+      <CommandPalette
+        open={paletteOpen}
+        emails={filteredEmails}
+        activeEmail={selectedEmail}
+        onClose={() => setPaletteOpen(false)}
+        onSelectEmail={(email) => {
+          setPaletteOpen(false);
+          openDetail(email);
+        }}
+        onAction={handleAction}
+        onReply={(email) => {
+          setPaletteOpen(false);
+          openReply(email);
+        }}
       />
       <Toast toast={toast} />
     </div>
