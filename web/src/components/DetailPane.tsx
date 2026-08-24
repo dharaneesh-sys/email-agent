@@ -46,6 +46,7 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack }: Deta
   const [summaryOpen, setSummaryOpen] = useState(true);
   const [smartReplyOpen, setSmartReplyOpen] = useState(true);
   const [fullEmailOpen, setFullEmailOpen] = useState(false);
+  const [bodyModePref, setBodyModePref] = useState<'html' | 'text'>('html');
 
   useEffect(() => {
     const id = email?.id ?? null;
@@ -136,16 +137,25 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack }: Deta
     return map;
   }, [activeSnapshot, email?.id, account]);
 
-  const fullBodyHtml = useMemo(() => {
+  const hasHtmlBody = Boolean(activeSnapshot?.body?.html);
+  const hasTextBody = Boolean(activeSnapshot?.body?.text || activeSnapshot?.body?.snippet);
+
+  // Effective mode clamps the preference to what this email actually provides.
+  const bodyMode: 'html' | 'text' =
+    bodyModePref === 'html' && !hasHtmlBody ? 'text'
+    : bodyModePref === 'text' && !hasTextBody ? 'html'
+    : bodyModePref;
+
+  const renderedBody = useMemo(() => {
     const body = activeSnapshot?.body;
     if (!body) return '';
-    if (body.html) return sanitizeEmailHtml(body.html, cidMap);
+    if (bodyMode === 'html' && body.html) return sanitizeEmailHtml(body.html, cidMap);
     const text = body.text ?? body.snippet ?? '';
     return text ? linkifyText(text) : '';
-  }, [activeSnapshot, cidMap]);
+  }, [activeSnapshot, cidMap, bodyMode]);
 
   const attachments = activeSnapshot?.body?.attachments ?? [];
-  const showFullEmail = fullEmailOpen && fullBodyHtml !== '';
+  const showFullEmail = fullEmailOpen && renderedBody !== '';
 
   return (
     <aside className={`detail-pane${email ? ' is-open' : ''}`} aria-label="Email details">
@@ -246,6 +256,20 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack }: Deta
             <section className="full-email-section">
               <div className="full-email-header panel-header">
                 <h2>Full Email</h2>
+                <div className="body-mode-toggle" role="group" aria-label="Body format">
+                  {(['html', 'text'] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      className={`body-mode-btn${bodyMode === mode ? ' is-active' : ''}`}
+                      aria-pressed={bodyMode === mode}
+                      disabled={mode === 'html' ? !hasHtmlBody : !hasTextBody}
+                      onClick={() => setBodyModePref(mode)}
+                    >
+                      {mode.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
                 <button
                   type="button"
                   className="panel-toggle"
@@ -266,7 +290,10 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack }: Deta
               ) : (
                 <div className="full-email-content" id="full-email-content" aria-label="Full email content">
                   {showFullEmail ? (
-                    <div className="full-email-body" dangerouslySetInnerHTML={{ __html: fullBodyHtml }} />
+                    <div
+                      className={`full-email-body${bodyMode === 'text' ? ' is-text' : ''}`}
+                      dangerouslySetInnerHTML={{ __html: renderedBody }}
+                    />
                   ) : (
                     <p className="full-email-empty">No readable content for this email.</p>
                   )}
