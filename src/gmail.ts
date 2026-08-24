@@ -204,8 +204,9 @@ class GmailService {
       query?: string;
       maxResults?: number;
       labelIds?: string[];
+      pageToken?: string;
     } = {}
-  ): Promise<string[]> {
+  ): Promise<{ ids: string[]; nextPageToken?: string | undefined }> {
     const gmail = await this.getGmail(accountId);
     const params: Record<string, unknown> = {
       userId: 'me',
@@ -213,9 +214,11 @@ class GmailService {
     };
     if (options.query) params['q'] = options.query;
     if (options.labelIds) params['labelIds'] = options.labelIds;
+    if (options.pageToken) params['pageToken'] = options.pageToken;
     const res = await gmail.users.messages.list(params);
 
-    return (res.data.messages ?? []).map(m => m.id!);
+    const nextPageToken = res.data.nextPageToken ?? undefined;
+    return nextPageToken ? { ids: (res.data.messages ?? []).map(m => m.id!), nextPageToken } : { ids: (res.data.messages ?? []).map(m => m.id!) };
   }
 
   /**
@@ -291,7 +294,7 @@ class GmailService {
     accountId: string,
     maxResults: number = 20
   ): Promise<Email[]> {
-    const messageIds = await this.listMessages(accountId, {
+    const { ids: messageIds } = await this.listMessages(accountId, {
       query: 'is:unread in:inbox',
       maxResults,
     });

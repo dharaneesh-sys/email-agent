@@ -55,10 +55,11 @@ export const api = {
     get<SignoutResponse>(`/api/auth/${encodeURIComponent(accountId)}/signout`),
   stats: (account: string) =>
     get<StatsResponse>(`/api/stats?account=${encodeURIComponent(account)}`),
-  emails: (account: string, query: string) =>
-    get<EmailsResponse>(
-      `/api/emails?account=${encodeURIComponent(account)}&query=${encodeURIComponent(query)}&maxResults=50`,
-    ),
+  emails: (account: string, query: string, cursor?: string | null) => {
+    let url = `/api/emails?account=${encodeURIComponent(account)}&query=${encodeURIComponent(query)}&maxResults=50`;
+    if (cursor) url += `&cursor=${encodeURIComponent(cursor)}`;
+      return get<EmailsResponse>(url);
+    },
   emailDetail: (id: string, account: string) =>
     get<EmailDetailResponse>(
       `/api/email/${encodeURIComponent(id)}?account=${encodeURIComponent(account)}`,

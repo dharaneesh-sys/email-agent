@@ -121,21 +121,23 @@ app.get('/api/oauth2callback', zValidator('query', z.object({
 
 // Get emails for an account with optional filtering
 app.get('/api/emails', zValidator('query', z.object({
-  account: z.string().optional(),
-  accountId: z.string().optional(),
-  query: z.string().optional(),
-  maxResults: z.coerce.number().int().min(1).max(100).optional(),
-  importantOnly: z.coerce.boolean().optional(),
+account: z.string().optional(),
+accountId: z.string().optional(),
+query: z.string().optional(),
+maxResults: z.coerce.number().int().min(1).max(100).optional(),
+importantOnly: z.coerce.boolean().optional(),
   unreadOnly: z.coerce.boolean().optional(),
+  cursor: z.string().optional(),
 })), async (c) => {
-  const {
-    account,
-    accountId = EMAIL_ACCOUNTS[0].id,
-    query,
-    maxResults = 20,
-    importantOnly = false,
+const {
+account,
+accountId = EMAIL_ACCOUNTS[0].id,
+query,
+maxResults = 20,
+importantOnly = false,
     unreadOnly = false,
-  } = c.req.valid('query');
+    cursor,
+} = c.req.valid('query');
   // The dashboard sends `account`, not `accountId` — honor whichever is present.
   const resolvedAccountId = account ?? accountId;
   const accountEmail = EMAIL_ACCOUNTS.find((acc) => acc.id === resolvedAccountId)?.email ?? '';
@@ -152,10 +154,10 @@ app.get('/api/emails', zValidator('query', z.object({
     // Note: important filtering will be done after fetching since Gmail's importance 
     // might not match our custom scoring
 
-    // Get message IDs
-    const messageIds = await gmailService.listMessages(resolvedAccountId, {
+    const { ids: messageIds, nextPageToken } = await gmailService.listMessages(resolvedAccountId, {
       query: gmailQuery,
-      maxResults: Math.min(maxResults * 2, 100), // Get extra to account for filtering
+      maxResults: Math.min(maxResults * 2, 100),
+      ...(cursor ? { pageToken: cursor } : {}),
     });
 
     // Fetch full messages
@@ -214,11 +216,12 @@ app.get('/api/emails', zValidator('query', z.object({
       ? emailItems.filter(e => e.isImportant)
       : emailItems;
 
-    return c.json({ 
-      emails: filteredEmails.slice(0, maxResults),
-      count: filteredEmails.length,
-      accountId: resolvedAccountId
-    });
+return c.json({
+emails: filteredEmails.slice(0, maxResults),
+count: filteredEmails.length,
+      accountId: resolvedAccountId,
+      nextCursor: nextPageToken ?? null,
+});
   } catch (error) {
     console.error('Error fetching emails:', error);
     const msg = error instanceof Error ? error.message : 'Failed to fetch emails';
@@ -426,7 +429,7 @@ app.get('/api/stats', async (c) => {
   try {
     const accountEmail = EMAIL_ACCOUNTS.find((acc) => acc.id === accountId)?.email ?? '';
     // Get unread count
-    const [unreadCount, totalInbox, messageIds] = await Promise.all([
+    const [unreadCount, totalInbox, { ids: messageIds }] = await Promise.all([
       gmailService.countMessages(accountId, 'is:unread in:inbox'),
       gmailService.countMessages(accountId, 'in:inbox'),
       // Same source set as /api/emails (in:inbox, newest 50) so the important

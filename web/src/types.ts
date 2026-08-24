@@ -46,9 +46,10 @@ export interface StatsResponse {
 }
 
 export interface EmailsResponse {
-  emails?: EmailListItem[];
-  count?: number;
+emails?: EmailListItem[];
+count?: number;
   accountId?: string;
+  nextCursor?: string | null;
 }
 
 export interface EmailAttachment {

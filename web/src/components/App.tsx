@@ -40,7 +40,7 @@ export function App() {
   const [composeOpen, setComposeOpen] = useState(false);
   const [drafting, setDrafting] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
-
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const importanceInitialized = useRef(false);
   const toastTimer = useRef<number | null>(null);
   const toastId = useRef(0);
@@ -66,11 +66,14 @@ export function App() {
   // Monotonic load sequence — discards responses superseded by a newer fetch
   // (e.g. auto-refresh overlapping a manual refresh, or an account switch).
   const emailsSeq = useRef(0);
-
+  const nextCursorRef = useRef<string | null>(null);
+  const emailsLoadingRef = useRef(false);
   const currentAccountId = auth.status === 'ready' ? (auth.accounts.find((a) => a.id === activeAccountId)?.authenticated ? activeAccountId : null) : null;
   currentAccountIdRef.current = currentAccountId;
   busyIdsRef.current = busyIds;
   selectedEmailIdRef.current = selectedEmailId;
+  emailsLoadingRef.current = emailsLoading;
+  nextCursorRef.current = nextCursor;
   const accounts = auth.status === 'ready' ? auth.accounts : [];
 
   useEffect(() => {
@@ -191,18 +194,33 @@ export function App() {
     [notify],
   );
 
-  const loadEmails = useCallback(async () => {
+  const loadEmails = useCallback(async (opts?: { append?: boolean; cursor?: string | null }) => {
     const accountId = currentAccountIdRef.current;
     if (!accountId) return;
+    const append = opts?.append ?? false;
+    const cursor = opts?.cursor !== undefined ? opts.cursor : append ? nextCursorRef.current : null;
+    if (append && !cursor) return;
+    if (append && emailsLoadingRef.current) return;
     const seq = ++emailsSeq.current;
     setEmailsLoading(true);
     setEmailsError(false);
     try {
-      const data = await api.emails(accountId, serverQueryRef.current);
+      const data = await api.emails(accountId, serverQueryRef.current, cursor ?? undefined);
       if (seq !== emailsSeq.current || currentAccountIdRef.current !== accountId) return;
       const list = data.emails ?? [];
-      setEmails(list);
-      if (!importanceInitialized.current && list.length > 0) {
+      const newCursor = data.nextCursor ?? null;
+      nextCursorRef.current = newCursor;
+      setNextCursor(newCursor);
+      if (append) {
+        setEmails((prev) => {
+          const seen = new Set(prev.map((e) => e.id));
+          const deduped = list.filter((e) => !seen.has(e.id));
+          return deduped.length ? [...prev, ...deduped] : prev;
+        });
+      } else {
+        setEmails(list);
+      }
+      if (!append && !importanceInitialized.current && list.length > 0) {
         importanceInitialized.current = true;
         void refreshImportance(true);
       }
@@ -213,6 +231,10 @@ export function App() {
       if (seq === emailsSeq.current) setEmailsLoading(false);
     }
   }, [refreshImportance]);
+
+  const handleLoadMore = useCallback(() => {
+    void loadEmails({ append: true, cursor: nextCursorRef.current });
+  }, [loadEmails]);
 
   const loadStats = useCallback(async () => {
     const account = currentAccountIdRef.current;
@@ -283,9 +305,11 @@ export function App() {
         if (wasActive) {
           const fallback = list.find((a) => a.authenticated) ?? null;
           currentAccountIdRef.current = fallback?.id ?? null;
-          setActiveAccountId(fallback?.id ?? null);
-          setEmails([]);
+setActiveAccountId(fallback?.id ?? null);
+setEmails([]);
           setSelectedEmailId(null);
+          setNextCursor(null);
+          nextCursorRef.current = null;
           if (fallback) {
             void opsRef.current.loadStats();
             void opsRef.current.loadEmails();
@@ -306,9 +330,11 @@ export function App() {
     setActiveAccountId(accountId);
     const acc = accounts.find((a) => a.id === accountId);
     currentAccountIdRef.current = acc?.authenticated ? accountId : null;
-    setEmails([]);
+setEmails([]);
     setSelectedEmailId(null);
-    setSearchQuery('');
+    setNextCursor(null);
+    nextCursorRef.current = null;
+setSearchQuery('');
     if (acc?.authenticated) {
       void opsRef.current.loadStats();
       void opsRef.current.loadEmails();
@@ -659,25 +685,27 @@ export function App() {
             </Button>
           </div>
           <div className="workspace" data-split={selectedEmailId ? '' : undefined}>
-            <EmailList
-              emails={filteredEmails}
-              loading={listLoading}
-              error={emailsError}
-              noAccount={noAccount}
-              selectedEmailId={selectedEmailId}
-              analyzing={analyzing}
-              busyIds={busyIds}
-              listRef={listRef}
+<EmailList
+emails={filteredEmails}
+loading={listLoading}
+error={emailsError}
+noAccount={noAccount}
+selectedEmailId={selectedEmailId}
+analyzing={analyzing}
+busyIds={busyIds}
+listRef={listRef}
               searchActive={searchQuery.trim().length > 0 || currentFilter !== 'all'}
-              onSelect={openDetail}
-              onAction={handleAction}
-              onReply={openReply}
-              onRetry={handleRetry}
-              onClearSearch={() => {
-                setSearchQuery('');
-                setCurrentFilter('all');
-              }}
-            />
+              hasMore={!!nextCursor}
+              onLoadMore={handleLoadMore}
+onSelect={openDetail}
+onAction={handleAction}
+onReply={openReply}
+onRetry={handleRetry}
+onClearSearch={() => {
+setSearchQuery('');
+setCurrentFilter('all');
+}}
+/>
             <DetailPane
               email={selectedEmail}
               accountId={currentAccountId}

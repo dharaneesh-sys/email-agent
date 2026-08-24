@@ -30,7 +30,7 @@ async function syncAccount(account: { id: string; email: string; label: string }
     }
     
     // Get recent unread emails (last 24 hours)
-    const messageIds = await gmailService.listMessages(account.id, {
+    const { ids: messageIds } = await gmailService.listMessages(account.id, {
       query: 'is:unread in:inbox newer_than:24h',
       maxResults: 50
     });
