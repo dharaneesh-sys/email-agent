@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import { useEffect, useRef, useState, type ComponentType } from 'react';
 import type { AccountStatus, Filter } from '../types';
 import type { IconProps } from '../icons';
 import { BoltIcon, InboxIcon, MailOpenIcon, SparklesIcon, StarIcon } from '../icons';
@@ -39,6 +39,11 @@ const FILTERS: ReadonlyArray<{ id: Filter; label: string; icon: ComponentType<Ic
   { id: 'starred', label: 'Starred', icon: StarIcon },
 ];
 
+function avatarInitial(acc: AccountStatus): string {
+  const src = acc.label ?? acc.email ?? acc.id;
+  return src.trim().charAt(0).toUpperCase() || '?';
+}
+
 export function NavRail({
   currentFilter,
   counts,
@@ -51,8 +56,34 @@ export function NavRail({
   const busyLabel = (busy: NavRailBusy | null, id: string, fallback: string) =>
     busy?.accountId === id ? (busy.action === 'connect' ? 'Connecting…' : 'Disconnecting…') : fallback;
 
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const railRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (openMenuId === null) return;
+    const onDocClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      if (railRef.current && !railRef.current.contains(target)) setOpenMenuId(null);
+      else {
+        const isMenuBtn = target.closest('.rail-account-menu');
+        const isDropdown = target.closest('.rail-account-dropdown');
+        if (!isMenuBtn && !isDropdown) setOpenMenuId(null);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpenMenuId(null);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [openMenuId]);
+
   return (
-    <nav className="nav-rail" aria-label="Mailbox">
+    <nav className="nav-rail" aria-label="Mailbox" ref={railRef as never}>
       <div className="rail-brand">
         <span className="rail-brand-mark" aria-hidden="true">
           <SparklesIcon size={18} />
@@ -96,42 +127,91 @@ export function NavRail({
               const active = acc.id === auth.activeAccountId;
               const authed = acc.authenticated;
               const busy = auth.busy?.accountId === acc.id ? auth.busy : null;
-              let actionLabel: string;
-              let onAction: () => void;
-              let disabled = false;
-              if (!authed) {
-                actionLabel = busyLabel(busy, acc.id, 'Connect');
-                onAction = () => onConnect(acc.id);
-              } else if (active) {
-                actionLabel = busyLabel(busy, acc.id, 'Disconnect');
-                onAction = () => onDisconnect(acc.id);
-              } else {
-                actionLabel = 'Switch';
-                onAction = () => onSelectAccount(acc.id);
-              }
-              if (busy) disabled = true;
+              const disabled = !!busy;
+              const initial = avatarInitial(acc);
+              const isOpen = openMenuId === acc.id;
               return (
                 <div
                   key={acc.id}
-                  className={`rail-account${active ? ' is-active' : ''}`}
+                  className={`rail-account rail-account--collapsed${active ? ' is-active' : ''}`}
                   {...(active ? { 'aria-current': 'true' as const } : {})}
                 >
-                  <span
-                    className={`rail-dot${authed ? ' is-connected' : ''}`}
-                    aria-hidden="true"
-                  />
-                  <span className="rail-account-text">
+                  <div className="rail-avatar-wrap" aria-hidden="true">
+                    <span className="rail-avatar">{initial}</span>
+                    <span className={`rail-avatar-dot${authed ? ' is-connected' : ''}`} />
+                  </div>
+                  <span className="rail-account-text rail-account-text--collapsed" aria-hidden="true">
                     <span className="rail-account-label">{acc.label ?? acc.id}</span>
-                    <strong className="rail-account-email">{acc.email ?? acc.id}</strong>
                   </span>
                   <button
                     type="button"
-                    className={`rail-account-btn${authed ? '' : ' is-connect'}`}
-                    onClick={onAction}
+                    className="rail-account-menu"
+                    aria-label={`Account menu for ${acc.label ?? acc.email ?? acc.id}`}
+                    aria-haspopup="menu"
+                    aria-expanded={isOpen}
+                    onClick={() => setOpenMenuId(isOpen ? null : acc.id)}
                     disabled={disabled}
                   >
-                    {actionLabel}
+                    ⋯
                   </button>
+                  {isOpen && (
+                    <div className="rail-account-dropdown" role="menu">
+                      {!authed ? (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="rail-dropdown-item is-connect"
+                          onClick={() => {
+                            setOpenMenuId(null);
+                            onConnect(acc.id);
+                          }}
+                          disabled={disabled}
+                        >
+                          {busyLabel(busy, acc.id, 'Connect')}
+                        </button>
+                      ) : active ? (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="rail-dropdown-item"
+                          onClick={() => {
+                            setOpenMenuId(null);
+                            onDisconnect(acc.id);
+                          }}
+                          disabled={disabled}
+                        >
+                          {busyLabel(busy, acc.id, 'Disconnect')}
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="rail-dropdown-item"
+                            onClick={() => {
+                              setOpenMenuId(null);
+                              onSelectAccount(acc.id);
+                            }}
+                            disabled={disabled}
+                          >
+                            Switch
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="rail-dropdown-item rail-dropdown-item--danger"
+                            onClick={() => {
+                              setOpenMenuId(null);
+                              onDisconnect(acc.id);
+                            }}
+                            disabled={disabled}
+                          >
+                            {busyLabel(busy, acc.id, 'Disconnect')}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
