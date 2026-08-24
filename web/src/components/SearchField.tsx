@@ -1,5 +1,6 @@
 import type { RefObject } from 'react';
-import { SearchIcon } from '../icons';
+import { parseSearchOperators, removeSearchOperator } from '../utils';
+import { SearchIcon, XIcon } from '../icons';
 
 interface SearchFieldProps {
   value: string;
@@ -8,23 +9,45 @@ interface SearchFieldProps {
 }
 
 export function SearchField({ value, onChange, inputRef }: SearchFieldProps) {
+  const { operators } = parseSearchOperators(value);
+
   return (
-    <div className="search-field">
-      <SearchIcon size={16} className="search-icon" />
-      <input
-        ref={inputRef}
-        type="search"
-        className="search-input"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="Search emails…"
-        aria-label="Search emails"
-        spellCheck={false}
-        autoComplete="off"
-      />
-      <kbd className="search-kbd" aria-hidden="true">
-        /
-      </kbd>
+    <div className="search-wrap">
+      <div className="search-field">
+        <SearchIcon size={16} className="search-icon" />
+        <input
+          ref={inputRef}
+          type="search"
+          className="search-input"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Search emails… from:x has:attachment"
+          aria-label="Search emails"
+          spellCheck={false}
+          autoComplete="off"
+        />
+        <kbd className="search-kbd" aria-hidden="true">
+          /
+        </kbd>
+      </div>
+      {operators.length > 0 && (
+        <div className="search-chips" role="list" aria-label="Active search operators">
+          {operators.map((op) => (
+            <span key={`${op.op}:${op.value}`} className="search-chip" role="listitem">
+              <span className="search-chip-op">{op.op}</span>
+              {op.value && <span className="search-chip-value">{op.value}</span>}
+              <button
+                type="button"
+                className="search-chip-remove"
+                aria-label={`Remove ${op.op} operator`}
+                onClick={() => onChange(removeSearchOperator(value, op))}
+              >
+                <XIcon size={12} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

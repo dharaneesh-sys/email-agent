@@ -2103,3 +2103,73 @@
   color: var(--text-tertiary);
   font-size: var(--text-caption);
 }
+
+/* ============ Search operators (1.3) ============ */
+
+.search-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1 1 240px;
+  min-inline-size: 200px;
+  max-inline-size: 480px;
+}
+
+.search-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.search-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  block-size: 24px;
+  background: var(--accent-muted);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+}
+
+.search-chip-op {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.search-chip-value {
+  color: var(--text-secondary);
+}
+
+.search-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 16px;
+  block-size: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+
+.search-chip-remove:hover {
+  color: var(--status-error);
+  background: var(--tint-error);
+}
+
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

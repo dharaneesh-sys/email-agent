@@ -45,6 +45,8 @@ export function App() {
   const searchRef = useRef<HTMLInputElement | null>(null);
   const listRef = useRef<HTMLElement | null>(null);
   const searchQueryRef = useRef('');
+  const [serverQuery, setServerQuery] = useState('');
+  const serverQueryRef = useRef('');
   const keysRef = useRef<(e: KeyboardEvent) => void>(() => {});
   // Account id read by async callbacks. Set imperatively in initAuth/disconnect
   // (before any setState) so the mount-time init sequence never sees a stale
@@ -71,6 +73,7 @@ export function App() {
 
   useEffect(() => {
     searchQueryRef.current = searchQuery;
+    serverQueryRef.current = serverQuery;
   });
 
   // --- Toast ---------------------------------------------------------------
@@ -193,7 +196,7 @@ export function App() {
     setEmailsLoading(true);
     setEmailsError(false);
     try {
-      const data = await api.emails(accountId, searchQueryRef.current);
+      const data = await api.emails(accountId, serverQueryRef.current);
       if (seq !== emailsSeq.current || currentAccountIdRef.current !== accountId) return;
       const list = data.emails ?? [];
       setEmails(list);
@@ -444,6 +447,22 @@ export function App() {
     setSelectedEmailId(email.id);
   }, []);
 
+  // Debounced server search — typing updates the client filter instantly, the
+  // Gmail query is pushed to /api/emails after a 300ms quiet period.
+  useEffect(() => {
+    const t = window.setTimeout(() => setServerQuery(searchQuery), 300);
+    return () => window.clearTimeout(t);
+  }, [searchQuery]);
+
+  const serverQueryMounted = useRef(false);
+  useEffect(() => {
+    if (!serverQueryMounted.current) {
+      serverQueryMounted.current = true;
+      return;
+    }
+    void opsRef.current.loadEmails();
+  }, [serverQuery]);
+
   // --- Init sequence + auto-refresh ---------------------------------------
 
   const opsRef = useRef({ loadEmails, loadStats, initAuth, loadConfig });
@@ -568,6 +587,9 @@ export function App() {
       <a className="skip-link" href="#email-list">
         Skip to content
       </a>
+      <p className="visually-hidden" role="status" aria-live="polite">
+        {`${filteredEmails.length} emails shown`}
+      </p>
       <div className="app-body">
         <NavRail
           currentFilter={currentFilter}

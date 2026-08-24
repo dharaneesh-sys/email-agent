@@ -149,3 +149,36 @@ export function initials(from: string): string {
   const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '';
   return (first + last).toUpperCase() || '?';
 }
+
+export interface SearchOperator {
+  op: string;
+  value: string;
+}
+
+const OPERATOR_RE = /(\w+):("[^"]*"|\S*)/g;
+
+/**
+ * Split a Gmail-style query into structured operators (from:, to:, subject:,
+ * has:attachment, is:unread, …) and the remaining plain text.
+ */
+export function parseSearchOperators(query: string): { operators: SearchOperator[]; plain: string } {
+  const operators: SearchOperator[] = [];
+  const plain = query
+    .replace(OPERATOR_RE, (_m, op: string, value: string) => {
+      operators.push({ op, value: value.replace(/^"|"$/g, '') });
+      return '';
+    })
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  return { operators, plain };
+}
+
+/** Remove one operator from the raw query, preserving the rest verbatim. */
+export function removeSearchOperator(query: string, target: SearchOperator): string {
+  const needle = `${target.op}:"${target.value}"`;
+  const bare = `${target.op}:${target.value}`;
+  const next = query
+    .replace(new RegExp(`${needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'ig'), '')
+    .replace(new RegExp(`(?<![\\w"])${bare.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w"])`, 'ig'), '');
+  return next.replace(/\s{2,}/g, ' ').trim();
+}
