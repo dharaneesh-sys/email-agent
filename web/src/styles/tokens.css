@@ -74,7 +74,8 @@
   --rail-width-collapsed: 64px;
 }
 
-/* Light theme — inverted surfaces, same lavender accent. */
+/* Light theme — inverted surfaces, same-hue lavender darkened to keep
+   accent-on-surface >= 4.5:1 (hue preserved, luminance inverted). */
 :root[data-theme="light"] {
   --surface-primary: #FCFCFD;
   --surface-secondary: #F2F2F5;
@@ -85,6 +86,9 @@
   --text-tertiary: #6B6A72;
   --border-default: #E2E2E8;
   --border-subtle: #ECECF0;
+  --accent-primary: #6B4FBB;
+  --accent-hover: #7C5FCE;
+  --accent-link: #5D43AE;
   --scrim: rgb(6 6 9 / 0.45);
   --shadow-modal: 0 16px 48px rgb(0 0 0 / 0.18);
 }

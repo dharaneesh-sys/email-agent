@@ -2378,3 +2378,7 @@
 /* Bulk label bar (3.5) */
 .bulk-bar { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-4); background: var(--accent-muted); border-block: 1px solid var(--border-subtle); }
 .bulk-count { font-size: var(--text-body-sm); font-weight: 600; color: var(--accent-primary); margin-inline-end: auto; }
+/* Mobile row-actions overflow fix (4.1) — hide secondary actions under 480px */
+@media (max-width: 480px) {
+  .row-actions .snooze-wrap { display: none; }
+}

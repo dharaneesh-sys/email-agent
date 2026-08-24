@@ -100,6 +100,18 @@ describe('design tokens', () => {
     expect(ratio).toBeGreaterThanOrEqual(4.5);
   });
 
+  test('light theme accent on surface-primary meets WCAG AA (>= 4.5:1)', () => {
+    const css = readFileSync(TOKENS_CSS, 'utf-8');
+    const lightBlock = css.split('[data-theme="light"]')[1] ?? '';
+    const pick = (name: string): string => {
+      const m = lightBlock.match(new RegExp(`--${name}\\s*:\\s*(#[0-9a-fA-F]{3,8})`));
+      if (!m?.[1]) throw new Error(`light-theme --${name} not found`);
+      return m[1];
+    };
+    const ratio = contrastRatio(pick('accent-primary'), pick('surface-primary'));
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+
   test('text-primary on surface-elevated meets WCAG AA (>= 4.5:1)', () => {
     const css = readFileSync(TOKENS_CSS, 'utf-8');
     const ratio = contrastRatio(parseToken(css, 'text-primary'), parseToken(css, 'surface-elevated'));
