@@ -107,8 +107,9 @@ export const EmailList = memo(function EmailList({
           if (!email) return null;
           return (
             <div
-              key={virtualRow.key}
+              key={email.id}
               data-index={virtualRow.index}
+              className="virtual-row"
               ref={virtualizer.measureElement}
               style={{
                 position: 'absolute',

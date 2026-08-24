@@ -2212,3 +2212,19 @@
   color: var(--text-secondary);
   font-size: var(--text-body-sm);
 }
+
+/* ============ List motion (1.6) — transform-only FLIP ============ */
+
+/* Rows are keyed by email id: when a filter change repositions surviving
+   rows, their translateY transition animates the move (FLIP-style).
+   Entering rows use the existing row-in stagger. */
+.virtual-row {
+  will-change: transform;
+  transition: transform var(--duration-standard) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .virtual-row {
+    transition-duration: 0.01ms;
+  }
+}
