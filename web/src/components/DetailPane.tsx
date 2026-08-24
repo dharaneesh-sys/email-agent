@@ -15,7 +15,62 @@ interface EmailBody {
   snippet?: string;
   text?: string | null;
   html?: string | null;
-  attachments?: EmailAttachment[];
+  attachments?: EmailAttachment[]
+}
+
+/**
+ * Consume the SSE summary stream. Resolves with the structured result from
+ * the terminal `done` event, or null when the server signalled an error or
+ * the stream ended without one. Deltas are forwarded as they arrive.
+ */
+async function consumeSummaryStream(
+  id: string,
+  account: string,
+  onDelta: (text: string) => void,
+): Promise<SummaryResponse | null> {
+  const res = await fetch(
+    `/api/summary/${encodeURIComponent(id)}/stream?account=${encodeURIComponent(account)}`,
+  );
+  if (!res.ok || !res.body) return null;
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let eventName = 'message';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let nl = buffer.indexOf('\n');
+    while (nl !== -1) {
+      const line = buffer.slice(0, nl).replace(/\r$/, '');
+      buffer = buffer.slice(nl + 1);
+      if (line === '') {
+        eventName = 'message';
+      } else if (line.startsWith('event:')) {
+        eventName = line.slice(6).trim();
+      } else if (line.startsWith('data:')) {
+        let payload: unknown = null;
+        try {
+          payload = JSON.parse(line.slice(5).trim());
+        } catch {
+          nl = buffer.indexOf('\n');
+          continue;
+        }
+        if (eventName === 'delta' && typeof payload === 'object' && payload !== null) {
+          const t = (payload as { t?: unknown }).t;
+          if (typeof t === 'string' && t.length > 0) onDelta(t);
+        } else if (eventName === 'done' && payload !== null && typeof payload === 'object') {
+          const p = payload as SummaryResponse;
+          if (typeof p.summary === 'string' && p.summary.length > 0) return p;
+          return null;
+        } else if (eventName === 'error') {
+          return null;
+        }
+      }
+      nl = buffer.indexOf('\n');
+    }
+  }
+  return null;
 }
 
 interface DetailSnapshot {
@@ -28,6 +83,7 @@ interface DetailSnapshot {
 
 type SummaryState =
   | { emailId: string; status: 'loading' }
+  | { emailId: string; status: 'streaming'; text: string }
   | { emailId: string; status: 'ready'; summary: string; keyPoints: string[]; suggestedAction?: string }
   | { emailId: string; status: 'unavailable' };
 
@@ -90,8 +146,21 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack }: Deta
         const cacheKey = `${account}:${id}`;
         let sum = summaryCache.get(cacheKey);
         if (!sum) {
-          sum = await api.summary(id, account);
+          // Try the SSE stream first — first token lands in ~hundreds of ms.
+          // Any failure falls back to the buffered endpoint.
+          const streamed = await consumeSummaryStream(id, account, (delta) => {
+            if (cancelled) return;
+            setSummary((prev) => {
+              const baseText = prev && prev.emailId === id && prev.status === 'streaming' ? prev.text : '';
+              return { emailId: id, status: 'streaming', text: baseText + delta };
+            });
+          });
           if (cancelled) return;
+          if (!streamed) {
+            sum = await api.summary(id, account);
+          } else {
+            sum = streamed;
+          }
           if (summaryCache.size >= SUMMARY_CACHE_LIMIT) summaryCache.clear();
           summaryCache.set(cacheKey, sum);
         }
@@ -227,6 +296,9 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack }: Deta
                       <span className="skeleton" />
                       <span className="skeleton" />
                     </div>
+                  )}
+                  {activeSummary?.status === 'streaming' && (
+                    <p className="summary-text is-streaming">{activeSummary.text}</p>
                   )}
                   {activeSummary?.status === 'ready' && (
                     <>

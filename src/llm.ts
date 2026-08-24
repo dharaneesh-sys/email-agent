@@ -6,7 +6,7 @@
 
 import { readFileSync } from 'node:fs'
 import { NIM_CONFIG } from './config'
-import { chat } from './nim'
+import { chat, chatStream } from './nim'
 import type { NimMessage } from './nim'
 
 export type Tone = 'professional' | 'friendly' | 'concise' | 'formal'
@@ -336,6 +336,60 @@ export class LlmService {
     } catch (err) {
       // Do not cache the failure — a later request retries the summary.
       console.warn(`Summary failed for ${email.id}: ${errorMessage(err)}`)
+      return null
+    }
+  }
+
+  /**
+   * Streaming variant of summarize — emits raw text deltas as they arrive.
+   * The model is asked for JSON-only output, so deltas are the JSON payload
+   * itself; the caller may render them raw and replace with the parsed
+   * result on completion. Failures are never cached.
+   */
+  async summarizeStream(
+    email: EmailLike,
+    onDelta: (text: string) => void,
+  ): Promise<SummaryResult | null> {
+    if (!this.isEnabled()) return null
+    const key = `summary:${email.id}`
+    const cached = this.summaryCacheGet(key)
+    if (cached !== undefined) {
+      if (cached !== null) onDelta(cached.summary)
+      return cached
+    }
+    const messages: NimMessage[] = [
+      { role: 'system', content: SUMMARY_SYSTEM_PROMPT },
+      { role: 'user', content: buildSummaryPrompt(email) },
+    ]
+    try {
+      const result = await chatStream(
+        {
+          model: this.getActiveModel(),
+          messages,
+          temperature: 0.2,
+          maxTokens: NIM_CONFIG.maxOutputTokens.summary,
+          responseFormat: { type: 'json_object' },
+        },
+        onDelta,
+      )
+      const parsed = parseJsonObject<{ summary?: unknown; keyPoints?: unknown; suggestedAction?: unknown }>(
+        result.content,
+      )
+      if (parsed === null || typeof parsed.summary !== 'string' || parsed.summary.trim() === '') {
+        throw new Error('Summary stream did not contain a valid summary string')
+      }
+      const summary: SummaryResult = {
+        summary: parsed.summary,
+        keyPoints: Array.isArray(parsed.keyPoints)
+          ? parsed.keyPoints.filter((point): point is string => typeof point === 'string')
+          : [],
+        suggestedAction: typeof parsed.suggestedAction === 'string' ? parsed.suggestedAction : '',
+        model: result.model,
+      }
+      this.summaryCacheSet(key, summary)
+      return summary
+    } catch (err) {
+      console.warn(`Summary stream failed for ${email.id}: ${errorMessage(err)}`)
       return null
     }
   }

@@ -232,6 +232,125 @@ export async function chat(params: NimChatParams): Promise<NimChatResult> {
   throw new NimError(0, null, 'NIM request failed') // unreachable — loop always returns or throws
 }
 
+interface StreamChunkBody {
+  model?: string
+  choices?: Array<{
+    delta?: { content?: string | null }
+    finish_reason?: string | null
+  }>
+}
+
+function isStreamChunk(value: unknown): value is StreamChunkBody {
+  if (!isRecord(value)) return false
+  if (value['choices'] !== undefined && !Array.isArray(value['choices'])) return false
+  return true
+}
+
+/**
+ * Streaming chat: invokes `onDelta` per content token as it arrives and
+ * resolves with the full accumulated result. Retries apply only until the
+ * first byte of the stream — once deltas flow, failures propagate (the
+ * caller has already emitted them downstream).
+ */
+export async function chatStream(
+  params: NimChatParams,
+  onDelta: (text: string) => void,
+): Promise<NimChatResult> {
+  const apiKey = NIM_CONFIG.apiKey
+  if (!apiKey) {
+    throw new NimError(0, null, 'NVIDIA NIM API key not configured')
+  }
+
+  const url = `${NIM_CONFIG.baseUrl}/chat/completions`
+  const timeoutMs = params.timeoutMs ?? NIM_CONFIG.timeoutMs
+
+  const requestBody: Record<string, unknown> = {
+    model: params.model,
+    messages: params.messages,
+    stream: true,
+  }
+  if (params.temperature !== undefined) requestBody['temperature'] = params.temperature
+  if (params.maxTokens !== undefined) requestBody['max_tokens'] = params.maxTokens
+  if (params.responseFormat !== undefined) requestBody['response_format'] = params.responseFormat
+
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${apiKey}`,
+    'Content-Type': 'application/json',
+  }
+
+  for (let attempt = 0; attempt <= NIM_CONFIG.maxRetries; attempt++) {
+    const attemptStart = Date.now()
+    let nimError: NimError
+    try {
+      const timeoutSignal = AbortSignal.timeout(timeoutMs)
+      const signal = params.signal === undefined ? timeoutSignal : AbortSignal.any([timeoutSignal, params.signal])
+      const response = await fetchImpl(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+        signal,
+      })
+      if (!response.ok || response.body === null) {
+        nimError = await nimErrorFromResponse(response)
+      } else {
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+        let content = ''
+        let model = params.model
+        let finishedReason: string | null = null
+        let streamDone = false
+        while (!streamDone) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          let newlineIdx = buffer.indexOf('\n')
+          while (newlineIdx !== -1 && !streamDone) {
+            const line = buffer.slice(0, newlineIdx).trim()
+            buffer = buffer.slice(newlineIdx + 1)
+            if (line.startsWith('data:')) {
+              const data = line.slice(5).trim()
+              if (data === '[DONE]') {
+                streamDone = true
+              } else {
+                try {
+                  const chunk: unknown = JSON.parse(data)
+                  if (isStreamChunk(chunk)) {
+                    if (typeof chunk.model === 'string') model = chunk.model
+                    const choice = chunk.choices?.[0]
+                    const deltaText = choice?.delta?.content
+                    if (typeof deltaText === 'string' && deltaText.length > 0) {
+                      content += deltaText
+                      onDelta(deltaText)
+                    }
+                    if (choice?.finish_reason != null) finishedReason = choice.finish_reason
+                  }
+                } catch {
+                  // Malformed chunk — skip it, the stream continues.
+                }
+              }
+            }
+            newlineIdx = buffer.indexOf('\n')
+          }
+        }
+        return {
+          content,
+          model,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+          latencyMs: Date.now() - attemptStart,
+          finishedReason,
+        }
+      }
+    } catch (err) {
+      nimError = toNimError(err)
+    }
+    if (!nimError.retryable || attempt === NIM_CONFIG.maxRetries) throw nimError
+    const wait = nimError.retryAfterMs ?? 500 * 2 ** attempt
+    await sleep(Math.min(wait, 30_000))
+  }
+  throw new NimError(0, null, 'NIM stream failed') // unreachable
+}
+
 export async function listModels(): Promise<string[]> {
   if (!NIM_CONFIG.apiKey) return []
   try {

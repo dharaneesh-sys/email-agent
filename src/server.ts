@@ -4,6 +4,7 @@
 import { Hono } from 'hono';
 import { serveStatic } from 'hono/bun';
 import { HTTPException } from 'hono/http-exception';
+import { streamSSE } from 'hono/streaming';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { EMAIL_ACCOUNTS } from './config';
@@ -525,6 +526,56 @@ app.get('/api/summary/:id', async (c) => {
   }
 });
 
+// Streaming summary — SSE with `delta` text events and a terminal
+// `done` (structured result) or `error` event. Clients that cannot
+// consume SSE fall back to the non-stream endpoint above.
+app.get('/api/summary/:id/stream', async (c) => {
+  const { id } = c.req.param();
+  const accountId = c.req.query('account') || EMAIL_ACCOUNTS[0].id;
+  if (!llmService.isEnabled()) {
+    return c.json({ error: 'LLM disabled' }, 503);
+  }
+
+  let email;
+  try {
+    email = await gmailService.getMessage(accountId, id);
+  } catch (error) {
+    console.error('Error fetching email for summary stream:', error);
+    return c.json({ error: 'Email not found' }, 404);
+  }
+
+  return streamSSE(c, async (sse) => {
+    // Serialize writes — onDelta fires synchronously from the stream reader.
+    let tail = Promise.resolve();
+    const enqueue = (event: string, data: string) => {
+      tail = tail.then(() => sse.writeSSE({ event, data }));
+    };
+    try {
+      const result = await llmService.summarizeStream(toEmailLike(email), (delta) => {
+        enqueue('delta', JSON.stringify({ t: delta }));
+      });
+      await tail;
+      if (result === null) {
+        await sse.writeSSE({ event: 'error', data: 'LLM summary failed' });
+        return;
+      }
+      await sse.writeSSE({
+        event: 'done',
+        data: JSON.stringify({
+          emailId: id,
+          summary: result.summary,
+          keyPoints: result.keyPoints,
+          suggestedAction: result.suggestedAction,
+          model: result.model,
+        }),
+      });
+    } catch (error) {
+      await tail.catch(() => {});
+      const msg = error instanceof Error ? error.message : 'Summary stream failed';
+      await sse.writeSSE({ event: 'error', data: msg }).catch(() => {});
+    }
+  });
+});
 // Draft an LLM reply for a single email (does NOT send)
 app.post('/api/reply/draft', zValidator('json', z.object({
   messageId: z.string(),

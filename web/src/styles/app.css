@@ -2269,3 +2269,28 @@
 .full-email-body.is-text {
   white-space: pre-wrap;
 }
+
+/* ============ Summary streaming (2.3) ============ */
+
+.summary-text.is-streaming::after {
+  content: '';
+  display: inline-block;
+  inline-size: 0.55em;
+  block-size: 1em;
+  margin-inline-start: 2px;
+  vertical-align: text-bottom;
+  background: var(--accent-primary);
+  animation: stream-cursor 1s steps(2) infinite;
+}
+
+@keyframes stream-cursor {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .summary-text.is-streaming::after {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+  }
+}
