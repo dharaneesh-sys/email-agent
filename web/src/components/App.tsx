@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { AccountStatus, EmailAction, EmailListItem, Filter, Tone, ToastVariant } from '../types';
+import type { AccountStatus, EmailAction, EmailListItem, Filter, SnoozeDuration, Tone, ToastVariant } from '../types';
 import { api } from '../api';
 import { shortenModelName } from '../utils';
 import { NavRail, type NavRailAuth, type NavRailCounts } from './NavRail';
@@ -489,6 +489,34 @@ setSearchQuery('');
     [applyLocalAction, loadStats, notify],
   );
 
+  const handleSnooze = useCallback(
+    async (email: EmailListItem, duration: SnoozeDuration) => {
+      const accountId = currentAccountIdRef.current;
+      if (!accountId) {
+        notify('Select an account first', 'error');
+        return;
+      }
+      if (pendingActionRef.current.has(email.id)) return;
+      pendingActionRef.current.add(email.id);
+      const snapshot = emailsRef.current.slice();
+      const snapshotSelected = selectedEmailIdRef.current;
+      setEmails((prev) => prev.filter((e) => e.id !== email.id));
+      if (snapshotSelected === email.id) setSelectedEmailId(null);
+      try {
+        await api.snooze(email.id, duration, accountId);
+        notify(`Snoozed for ${duration === '3h' ? '3 hours' : duration === 'tomorrow' ? 'tomorrow' : 'next week'}`, 'success');
+        void loadStats();
+      } catch {
+        setEmails(snapshot);
+        setSelectedEmailId(snapshotSelected);
+        notify('Failed to snooze email', 'error');
+      } finally {
+        pendingActionRef.current.delete(email.id);
+      }
+    },
+    [loadStats, notify],
+  );
+
   // --- Reply / draft flows -------------------------------------------------
 
   const openReply = useCallback((email: EmailListItem) => {
@@ -774,27 +802,28 @@ setSearchQuery('');
             </Button>
           </div>
           <div className="workspace" data-split={selectedEmailId ? '' : undefined}>
-<EmailList
-emails={filteredEmails}
-loading={listLoading}
-error={emailsError}
-noAccount={noAccount}
-selectedEmailId={selectedEmailId}
-analyzing={analyzing}
-busyIds={busyIds}
-listRef={listRef}
+            <EmailList
+              emails={filteredEmails}
+              loading={listLoading}
+              error={emailsError}
+              noAccount={noAccount}
+              selectedEmailId={selectedEmailId}
+              analyzing={analyzing}
+              busyIds={busyIds}
+              listRef={listRef}
               searchActive={searchQuery.trim().length > 0 || currentFilter !== 'all'}
               hasMore={!!nextCursor}
               onLoadMore={handleLoadMore}
-onSelect={openDetail}
-onAction={handleAction}
-onReply={openReply}
-onRetry={handleRetry}
-onClearSearch={() => {
-setSearchQuery('');
-setCurrentFilter('all');
-}}
-/>
+              onSelect={openDetail}
+              onAction={handleAction}
+              onReply={openReply}
+              onSnooze={handleSnooze}
+              onRetry={handleRetry}
+              onClearSearch={() => {
+                setSearchQuery('');
+                setCurrentFilter('all');
+              }}
+            />
             <DetailPane
               email={selectedEmail}
               accountId={currentAccountId}
@@ -802,6 +831,7 @@ setCurrentFilter('all');
               onDraft={(tone) => void draftReply(tone)}
               onBack={() => setSelectedEmailId(null)}
               onReply={openReply}
+              onSnooze={handleSnooze}
             />
           </div>
         </div>

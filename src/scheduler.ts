@@ -3,7 +3,7 @@
 
 import { EMAIL_ACCOUNTS } from './config';
 import { authManager } from './auth';
-import { gmailService } from './gmail';
+import { gmailService, getSnoozeStore } from './gmail';
 import { importanceScorer } from './importance';
 
 interface SyncResult {
@@ -100,12 +100,68 @@ async function runSync(): Promise<void> {
   // For now, we just log to console
 }
 
+export async function checkSnoozed(): Promise<number> {
+  let restored = 0;
+  const store = getSnoozeStore();
+  const now = Date.now();
+  for (const account of EMAIL_ACCOUNTS) {
+    if (!authManager.hasValidToken(account.id)) continue;
+    try {
+      let pageToken: string | undefined = undefined;
+      do {
+        const { ids, nextPageToken } = await gmailService.listMessages(account.id, {
+          query: 'label:SNOOZED',
+          maxResults: 100,
+          ...(pageToken ? { pageToken } : {}),
+        });
+        for (const id of ids) {
+          const key = `${account.id}:${id}`;
+          const until = store.get(key);
+          if (until === undefined) continue;
+          if (now >= until) {
+            try {
+              await gmailService.unsnooze(account.id, id);
+              restored += 1;
+            } catch (e) {
+              console.error(`Failed to unsnooze ${key}:`, e);
+            }
+          }
+        }
+        pageToken = nextPageToken;
+      } while (pageToken);
+    } catch (e) {
+      console.error(`Snooze check failed for ${account.id}:`, e);
+    }
+  }
+  if (restored > 0) console.log(`[${new Date().toISOString()}] Snooze check: restored ${restored} messages`);
+  return restored;
+}
+
+let snoozeTimer: ReturnType<typeof setInterval> | null = null;
+
+export function startSnoozeScheduler(intervalMs = 60_000): void {
+  if (snoozeTimer !== null) return;
+  snoozeTimer = setInterval(() => {
+    void checkSnoozed();
+  }, intervalMs);
+  const t = snoozeTimer as unknown as { unref?: () => void };
+  if (typeof t.unref === 'function') t.unref();
+}
+
+export function stopSnoozeScheduler(): void {
+  if (snoozeTimer !== null) {
+    clearInterval(snoozeTimer);
+    snoozeTimer = null;
+  }
+}
+
 // If this script is run directly, execute the sync
 if (import.meta.main) {
   runSync().catch((error) => {
     console.error('Scheduler failed:', error);
     process.exit(1);
   });
+  startSnoozeScheduler();
 }
 
 export { runSync, syncAccount };

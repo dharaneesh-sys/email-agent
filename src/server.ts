@@ -419,6 +419,45 @@ app.post('/api/email/:id/action', zValidator('json', z.object({
   }
 });
 
+// Snooze an email: POST /api/email/:id/snooze {duration, accountId?}
+app.post('/api/email/:id/snooze', zValidator('json', z.object({
+  duration: z.enum(['3h', 'tomorrow', 'nextWeek']),
+  accountId: z.string().optional(),
+})), async (c) => {
+  const { id } = c.req.param();
+  const { duration, accountId: bodyAccountId } = c.req.valid('json');
+  const accountId = bodyAccountId ?? c.req.query('account') ?? EMAIL_ACCOUNTS[0].id;
+  if (!EMAIL_ACCOUNTS.some((acc) => acc.id === accountId)) {
+    throw new HTTPException(400, { message: 'Invalid account ID' });
+  }
+  try {
+    const { snoozeUntil } = await gmailService.snooze(accountId, id, duration);
+    return c.json({ success: true, emailId: id, duration, snoozeUntil });
+  } catch (error) {
+    console.error('Error snoozing email:', error);
+    const msg = error instanceof Error ? error.message : 'Failed to snooze email';
+    throw new HTTPException(500, { message: msg });
+  }
+});
+
+app.post('/api/email/:id/unsnooze', zValidator('json', z.object({
+  accountId: z.string().optional(),
+})), async (c) => {
+  const { id } = c.req.param();
+  const { accountId: bodyAccountId } = c.req.valid('json');
+  const accountId = bodyAccountId ?? c.req.query('account') ?? EMAIL_ACCOUNTS[0].id;
+  if (!EMAIL_ACCOUNTS.some((acc) => acc.id === accountId)) {
+    throw new HTTPException(400, { message: 'Invalid account ID' });
+  }
+  try {
+    await gmailService.unsnooze(accountId, id);
+    return c.json({ success: true, emailId: id });
+  } catch (error) {
+    console.error('Error unsnoozing email:', error);
+    throw new HTTPException(500, { message: 'Failed to unsnooze email' });
+  }
+});
+
 // Get available labels
 app.get('/api/labels', async (c) => {
   const accountId = c.req.query('account') || EMAIL_ACCOUNTS[0].id;

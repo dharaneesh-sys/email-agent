@@ -1,6 +1,6 @@
-import { memo } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
-import type { EmailAction, EmailListItem } from '../types';
+import type { EmailAction, EmailListItem, SnoozeDuration } from '../types';
 import { avatarIndex, formatDate, initials } from '../utils';
 import { IconButton } from './Button';
 import { ScoreChip } from './ScoreChip';
@@ -8,6 +8,7 @@ import {
   ArchiveIcon,
   BoltIcon,
   CircleIcon,
+  ClockIcon,
   MailIcon,
   MailOpenIcon,
   ReplyIcon,
@@ -25,6 +26,7 @@ interface EmailItemProps {
   onSelect(email: EmailListItem): void;
   onAction(email: EmailListItem, action: EmailAction): void;
   onReply(email: EmailListItem): void;
+  onSnooze?: ((email: EmailListItem, duration: SnoozeDuration) => void) | undefined;
 }
 
 const FILTERED_LABELS = new Set(['INBOX', 'UNREAD', 'STARRED', 'IMPORTANT']);
@@ -38,7 +40,25 @@ export const EmailItem = memo(function EmailItem({
   onSelect,
   onAction,
   onReply,
+  onSnooze,
 }: EmailItemProps) {
+  const [snoozeOpen, setSnoozeOpen] = useState(false);
+  const snoozeRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!snoozeOpen) return;
+    const onDoc = (e: globalThis.MouseEvent) => {
+      if (snoozeRef.current && !snoozeRef.current.contains(e.target as Node)) setSnoozeOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSnoozeOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [snoozeOpen]);
   const isStarred = email.labels.includes('STARRED');
   const otherLabels = email.labels.filter((l) => !FILTERED_LABELS.has(l));
   const scoreTipId = `score-tip-${email.id}`;
@@ -200,6 +220,41 @@ export const EmailItem = memo(function EmailItem({
         >
           <ReplyIcon size={16} />
         </IconButton>
+        <div className="snooze-wrap" ref={snoozeRef} style={{ position: 'relative' }}>
+          <IconButton
+            size="sm"
+            label="Snooze"
+            disabled={busy}
+            aria-haspopup="menu"
+            aria-expanded={snoozeOpen}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSnoozeOpen((v) => !v);
+            }}
+          >
+            <ClockIcon size={16} />
+          </IconButton>
+          {snoozeOpen && (
+            <div role="menu" className="snooze-menu" style={{ position: 'absolute', right: 0, top: '100%', zIndex: 10, background: 'var(--surface, #1e1e1e)', border: '1px solid var(--border, #333)', borderRadius: 8, padding: 4, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
+              {(['3h', 'tomorrow', 'nextWeek'] as const).map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  role="menuitem"
+                  className="snooze-option"
+                  style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSnoozeOpen(false);
+                    if (onSnooze) onSnooze(email, d);
+                  }}
+                >
+                  {d === '3h' ? '3 hours' : d === 'tomorrow' ? 'Tomorrow 9am' : 'Next week'}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <IconButton
           size="sm"
           label="Delete"

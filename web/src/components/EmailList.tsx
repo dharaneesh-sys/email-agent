@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import type { EmailAction, EmailListItem } from '../types';
+import type { EmailAction, EmailListItem, SnoozeDuration } from '../types';
 import { Button } from './Button';
 import { EmailItem } from './EmailItem';
 import { SkeletonRow } from './SkeletonRow';
@@ -21,6 +21,7 @@ interface EmailListProps {
   onSelect(email: EmailListItem): void;
   onAction(email: EmailListItem, action: EmailAction): void;
   onReply(email: EmailListItem): void;
+  onSnooze?: ((email: EmailListItem, duration: SnoozeDuration) => void) | undefined;
   onRetry(): void;
   onClearSearch(): void;
 }
@@ -40,6 +41,7 @@ export const EmailList = memo(function EmailList({
   onSelect,
   onAction,
   onReply,
+  onSnooze,
   onRetry,
   onClearSearch,
 }: EmailListProps) {
@@ -149,6 +151,7 @@ export const EmailList = memo(function EmailList({
                   onSelect={onSelect}
                   onAction={onAction}
                   onReply={onReply}
+                  onSnooze={onSnooze}
                 />
               </div>
             );

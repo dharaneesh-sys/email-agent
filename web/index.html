@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Email Agent — smart inbox with AI-powered prioritization" />
     <meta name="theme-color" content="#0E0E11" />
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('email-agent:theme');
+          if (!t) t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+          if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+        } catch {}
+      })();
+    </script>
     <title>Email Agent</title>
     <link
       rel="icon"

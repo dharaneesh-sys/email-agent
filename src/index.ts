@@ -1,5 +1,6 @@
 // Entry point for the Email Agent server
 import app from './server';
+import { startSnoozeScheduler } from './scheduler';
 
 const port = parseInt(process.env['PORT'] || '3030', 10);
 
@@ -14,7 +15,7 @@ const fetchHandler = async (req: Request) => {
 };
 
 console.log(`🚀 Email Agent server starting on http://localhost:${port}`);
-console.log(`📧 Dashboard: http://${port}/dashboard.html`);
+startSnoozeScheduler();
 
 export default {
   port,

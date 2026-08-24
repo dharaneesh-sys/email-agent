@@ -73,3 +73,18 @@
   --rail-width: 220px;
   --rail-width-collapsed: 64px;
 }
+
+/* Light theme — inverted surfaces, same lavender accent. */
+:root[data-theme="light"] {
+  --surface-primary: #FCFCFD;
+  --surface-secondary: #F2F2F5;
+  --surface-elevated: #ECECF0;
+  --surface-hover: #E8E8EB;
+  --text-primary: #0E0E11;
+  --text-secondary: #484558;
+  --text-tertiary: #6B6A72;
+  --border-default: #E2E2E8;
+  --border-subtle: #ECECF0;
+  --scrim: rgb(6 6 9 / 0.45);
+  --shadow-modal: 0 16px 48px rgb(0 0 0 / 0.18);
+}

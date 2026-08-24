@@ -136,12 +136,49 @@ const LABEL_IDS = {
   IMPORTANT: 'IMPORTANT',
   TRASH: 'TRASH',
   SPAM: 'SPAM',
+  SNOOZED: 'SNOOZED',
   CATEGORY_PERSONAL: 'CATEGORY_PERSONAL',
   CATEGORY_SOCIAL: 'CATEGORY_SOCIAL',
   CATEGORY_PROMOTIONS: 'CATEGORY_PROMOTIONS',
   CATEGORY_UPDATES: 'CATEGORY_UPDATES',
   CATEGORY_FORUMS: 'CATEGORY_FORUMS',
 };
+
+export type SnoozeDuration = '3h' | 'tomorrow' | 'nextWeek';
+
+const snoozeStore = new Map<string, number>();
+
+function snoozeKey(accountId: string, messageId: string): string {
+  return `${accountId}:${messageId}`;
+}
+
+export function computeSnoozeUntil(duration: SnoozeDuration, nowMs = Date.now()): number {
+  const now = new Date(nowMs);
+  if (duration === '3h') return nowMs + 3 * 60 * 60 * 1000;
+  if (duration === 'tomorrow') {
+    const d = new Date(now);
+    d.setDate(d.getDate() + 1);
+    d.setHours(9, 0, 0, 0);
+    if (d.getTime() <= nowMs) d.setDate(d.getDate() + 1);
+    return d.getTime();
+  }
+  const d = new Date(now);
+  d.setDate(d.getDate() + 7);
+  d.setHours(9, 0, 0, 0);
+  return d.getTime();
+}
+
+export function getSnoozeUntil(accountId: string, messageId: string): number | undefined {
+  return snoozeStore.get(snoozeKey(accountId, messageId));
+}
+
+export function getSnoozeStore(): Map<string, number> {
+  return snoozeStore;
+}
+
+export function clearSnoozeStore(): void {
+  snoozeStore.clear();
+}
 
 class GmailService {
   /**
@@ -546,6 +583,49 @@ class GmailService {
     const match = from.match(/<([^>]+)>/);
     if (match?.[1]) return match[1];
     return from.trim();
+  }
+
+  /**
+   * Snooze a message: add SNOOZED + CATEGORY_UPDATES, remove INBOX, store until timestamp
+   */
+  async snooze(accountId: string, messageId: string, duration: SnoozeDuration): Promise<{ snoozeUntil: number }> {
+    const snoozeUntil = computeSnoozeUntil(duration);
+    const gmail = await this.getGmail(accountId);
+    try {
+      const labels = await gmail.users.labels.list({ userId: 'me' });
+      const hasSnoozed = (labels.data.labels ?? []).some((l) => l.name === LABEL_IDS.SNOOZED || l.id === LABEL_IDS.SNOOZED);
+      if (!hasSnoozed) {
+        await gmail.users.labels.create({
+          userId: 'me',
+          requestBody: { name: LABEL_IDS.SNOOZED, labelListVisibility: 'labelShow', messageListVisibility: 'show' },
+        });
+      }
+    } catch {
+      // best-effort
+    }
+    await gmail.users.messages.modify({
+      userId: 'me',
+      id: messageId,
+      requestBody: {
+        addLabelIds: [LABEL_IDS.SNOOZED, LABEL_IDS.CATEGORY_UPDATES],
+        removeLabelIds: [LABEL_IDS.INBOX],
+      },
+    });
+    snoozeStore.set(snoozeKey(accountId, messageId), snoozeUntil);
+    return { snoozeUntil };
+  }
+
+  async unsnooze(accountId: string, messageId: string): Promise<void> {
+    const gmail = await this.getGmail(accountId);
+    await gmail.users.messages.modify({
+      userId: 'me',
+      id: messageId,
+      requestBody: {
+        addLabelIds: [LABEL_IDS.INBOX],
+        removeLabelIds: [LABEL_IDS.SNOOZED],
+      },
+    });
+    snoozeStore.delete(snoozeKey(accountId, messageId));
   }
 
   /**

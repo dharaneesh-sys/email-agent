@@ -152,6 +152,15 @@ export type EmailAction =
   | 'trash'
   | 'untrash';
 
+export type SnoozeDuration = '3h' | 'tomorrow' | 'nextWeek';
+
+export interface SnoozeResponse {
+  success: boolean;
+  emailId?: string;
+  duration?: SnoozeDuration;
+  snoozeUntil?: number;
+}
+
 export type ToastVariant = 'info' | 'success' | 'error';
 
 export interface ThreadMessage {

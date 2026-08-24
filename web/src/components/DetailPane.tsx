@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { EmailAttachment, EmailListItem, Tone } from '../types';
+import type { EmailAttachment, EmailListItem, SnoozeDuration, Tone } from '../types';
 import type { SummaryResponse, ThreadMessage } from '../types';
 import { api, attachmentUrl } from '../api';
 import { formatDate, formatFileSize, linkifyText, resolveDetailBody, sanitizeEmailHtml } from '../utils';
 import { Button, IconButton } from './Button';
 import { ScoreChip } from './ScoreChip';
 import { ThreadStack } from './ThreadStack';
-import { BackIcon, BoltIcon, ChevronIcon, MailIcon, PaperclipIcon, SparklesIcon } from '../icons';
+import { BackIcon, BoltIcon, ChevronIcon, ClockIcon, MailIcon, PaperclipIcon, SparklesIcon } from '../icons';
 
 // Session cache per account+email so re-selecting an email skips the LLM-backed summary fetch.
 const summaryCache = new Map<string, SummaryResponse>();
@@ -95,9 +95,10 @@ interface DetailPaneProps {
   onDraft(tone: Tone): void;
   onBack(): void;
   onReply(email: EmailListItem): void;
+  onSnooze?: ((email: EmailListItem, duration: SnoozeDuration) => void) | undefined;
 }
 
-export function DetailPane({ email, accountId, drafting, onDraft, onBack, onReply }: DetailPaneProps) {
+export function DetailPane({ email, accountId, drafting, onDraft, onBack, onReply, onSnooze }: DetailPaneProps) {
   const [snapshot, setSnapshot] = useState<DetailSnapshot | null>(null);
   const [summary, setSummary] = useState<SummaryState | null>(null);
   const [tone, setTone] = useState<Tone>('professional');
@@ -107,6 +108,7 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack, onRepl
   const [threadCount, setThreadCount] = useState(0);
   const [preview, setPreview] = useState<EmailAttachment | null>(null);
   const [bodyModePref, setBodyModePref] = useState<'html' | 'text'>('html');
+  const [snoozeOpen, setSnoozeOpen] = useState(false);
 
   useEffect(() => {
     const id = email?.id ?? null;
@@ -254,6 +256,29 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack, onRepl
                 <p className="detail-date">
                   {activeSnapshot?.date ? formatDate(new Date(activeSnapshot.date)) : ''}
                 </p>
+              </div>
+              <div style={{ position: 'relative', marginLeft: 'auto' }}>
+                <IconButton size="sm" label="Snooze" aria-haspopup="menu" aria-expanded={snoozeOpen} onClick={() => setSnoozeOpen((v) => !v)}>
+                  <ClockIcon size={18} />
+                </IconButton>
+                {snoozeOpen && (
+                  <div role="menu" style={{ position: 'absolute', right: 0, top: '100%', zIndex: 10, background: 'var(--surface, #1e1e1e)', border: '1px solid var(--border, #333)', borderRadius: 8, padding: 4, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
+                    {(['3h', 'tomorrow', 'nextWeek'] as const).map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        role="menuitem"
+                        style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13 }}
+                        onClick={() => {
+                          setSnoozeOpen(false);
+                          if (onSnooze && email) onSnooze(email, d);
+                        }}
+                      >
+                        {d === '3h' ? '3 hours' : d === 'tomorrow' ? 'Tomorrow 9am' : 'Next week'}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

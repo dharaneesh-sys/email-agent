@@ -17,6 +17,8 @@ import type {
   SummaryResponse,
   ThreadResponse,
   Tone,
+  SnoozeResponse,
+  SnoozeDuration,
 } from './types';
 
 export class ApiError extends Error {
@@ -89,6 +91,10 @@ export const api = {
       `/api/thread/${encodeURIComponent(threadId)}?account=${encodeURIComponent(account)}`,
     ),
   config: () => get<ConfigResponse>('/api/config'),
+  snooze: (id: string, duration: SnoozeDuration, accountId: string) =>
+    post<SnoozeResponse>(`/api/email/${encodeURIComponent(id)}/snooze`, { duration, accountId }),
+  unsnooze: (id: string, accountId: string) =>
+    post<SnoozeResponse>(`/api/email/${encodeURIComponent(id)}/unsnooze`, { accountId }),
 };
 
 export function attachmentUrl(id: string, attachment: EmailAttachment, account: string): string {
