@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import type { ReactNode, RefObject } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import type { EmailAction, EmailListItem } from '../types';
 import { Button } from './Button';
 import { EmailItem } from './EmailItem';
@@ -35,6 +36,13 @@ export const EmailList = memo(function EmailList({
   onReply,
   onRetry,
 }: EmailListProps) {
+  const virtualizer = useVirtualizer({
+    count: emails.length,
+    getScrollElement: () => listRef.current,
+    estimateSize: () => 72,
+    overscan: 5,
+  });
+
   let content: ReactNode;
 
   if (noAccount) {
@@ -70,19 +78,46 @@ export const EmailList = memo(function EmailList({
       </div>
     );
   } else {
-    content = emails.map((email, i) => (
-      <EmailItem
-        key={email.id}
-        email={email}
-        index={i}
-        selected={email.id === selectedEmailId}
-        analyzing={analyzing}
-        busy={busyIds.has(email.id)}
-        onSelect={onSelect}
-        onAction={onAction}
-        onReply={onReply}
-      />
-    ));
+    const virtualItems = virtualizer.getVirtualItems();
+    content = (
+      <div
+        style={{
+          height: `${virtualizer.getTotalSize()}px`,
+          width: '100%',
+          position: 'relative',
+        }}
+      >
+        {virtualItems.map((virtualRow) => {
+          const email = emails[virtualRow.index];
+          if (!email) return null;
+          return (
+            <div
+              key={virtualRow.key}
+              data-index={virtualRow.index}
+              ref={virtualizer.measureElement}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                transform: `translateY(${virtualRow.start}px)`,
+              }}
+            >
+              <EmailItem
+                email={email}
+                index={virtualRow.index}
+                selected={email.id === selectedEmailId}
+                analyzing={analyzing}
+                busy={busyIds.has(email.id)}
+                onSelect={onSelect}
+                onAction={onAction}
+                onReply={onReply}
+              />
+            </div>
+          );
+        })}
+      </div>
+    );
   }
 
   return (
