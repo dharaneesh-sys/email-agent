@@ -453,6 +453,38 @@ app.post('/api/email/:id/reply', zValidator('json', z.object({
   }
 });
 
+// Compose-and-send a brand-new message (no thread)
+app.post('/api/email/compose', zValidator('json', z.object({
+  to: z.string().email()
+    .or(z.string().regex(/^[^@,\s]+@[^@,\s]+(\s*,\s*[^@,\s]+@[^@,\s]+)*$/, 'Invalid recipient list')),
+  cc: z.string().optional(),
+  bcc: z.string().optional(),
+  subject: z.string().min(1).max(998),
+  body: z.string().min(1),
+  accountId: z.string().optional(),
+})), async (c) => {
+  const { to, cc, bcc, subject, body, accountId = EMAIL_ACCOUNTS[0].id } = c.req.valid('json');
+
+  if (!EMAIL_ACCOUNTS.some(acc => acc.id === accountId)) {
+    throw new HTTPException(400, { message: 'Invalid account ID' });
+  }
+
+  try {
+    const result = await gmailService.sendCompose(accountId, {
+      to,
+      ...(cc ? { cc } : {}),
+      ...(bcc ? { bcc } : {}),
+      subject,
+      body,
+    });
+    return c.json({ success: true, message: 'Email sent', emailId: result });
+  } catch (error) {
+    console.error('Error sending composed email:', error);
+    const msg = error instanceof Error ? error.message : 'Failed to send email';
+    throw new HTTPException(500, { message: msg });
+  }
+});
+
 // Re-score a batch of emails with the LLM (dashboard refresh button)
 app.post('/api/importance/refresh', zValidator('json', z.object({
   ids: z.array(z.string()).min(1).max(100),

@@ -80,6 +80,8 @@ export const api = {
       body,
       accountId,
     }),
+  compose: (message: { to: string; cc?: string; bcc?: string; subject: string; body: string }, accountId: string) =>
+    post<ReplyResponse>('/api/email/compose', { ...message, accountId }),
   config: () => get<ConfigResponse>('/api/config'),
 };
 

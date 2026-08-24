@@ -8,6 +8,7 @@ import { EmailList } from './EmailList';
 import { DetailPane } from './DetailPane';
 import { ReplyModal } from './ReplyModal';
 import { CommandPalette } from './CommandPalette';
+import { ComposeModal } from './ComposeModal';
 import { Toast, type ToastState } from './Toast';
 import { Button, IconButton } from './Button';
 import { RefreshIcon, SparklesIcon } from '../icons';
@@ -36,6 +37,7 @@ export function App() {
   const [replyEmail, setReplyEmail] = useState<EmailListItem | null>(null);
   const [replyPrefill, setReplyPrefill] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [composeOpen, setComposeOpen] = useState(false);
   const [drafting, setDrafting] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
 
@@ -397,6 +399,22 @@ export function App() {
     [replyEmail, currentAccountId, notify],
   );
 
+  const sendCompose = useCallback(
+    async (message: { to: string; cc?: string; bcc?: string; subject: string; body: string }): Promise<boolean> => {
+      if (!currentAccountId) return false;
+      try {
+        const data = await api.compose(message, currentAccountId);
+        if (!data.success) throw new Error('Send failed');
+        setComposeOpen(false);
+        notify('Email sent!', 'success');
+        return true;
+      } catch {
+        notify('Failed to send email', 'error');
+        return false;
+      }
+    },
+    [currentAccountId, notify],
+  );
   const draftReply = useCallback(
     async (tone: Tone) => {
       if (!selectedEmailId || !currentAccountId) {
@@ -510,6 +528,10 @@ export function App() {
           setPaletteOpen(false);
           return;
         }
+        if (composeOpen) {
+          setComposeOpen(false);
+          return;
+        }
         if (replyEmail) {
           setReplyEmail(null);
           return;
@@ -544,6 +566,11 @@ export function App() {
         }
         return;
       }
+      if (e.key === 'c' && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        e.preventDefault();
+        setComposeOpen(true);
+        return;
+      }
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         if (filteredEmails.length === 0) return;
         e.preventDefault();
@@ -556,7 +583,7 @@ export function App() {
         if (item) setSelectedEmailId(item.id);
       }
     },
-    [paletteOpen, replyEmail, selectedEmailId, searchQuery, filteredEmails, emails, openReply],
+    [paletteOpen, replyEmail, composeOpen, selectedEmailId, searchQuery, filteredEmails, emails, openReply],
   );
 
   useEffect(() => {
@@ -681,6 +708,12 @@ export function App() {
           setPaletteOpen(false);
           openReply(email);
         }}
+      />
+      <ComposeModal
+        open={composeOpen}
+        accountId={currentAccountId}
+        onClose={() => setComposeOpen(false)}
+        onSend={sendCompose}
       />
       <Toast toast={toast} />
     </div>

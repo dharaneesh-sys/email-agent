@@ -2294,3 +2294,21 @@
     animation-iteration-count: 1;
   }
 }
+
+/* ============ Compose modal (2.4) ============ */
+
+.compose-modal {
+  inline-size: min(640px, calc(100vw - 32px));
+}
+
+.compose-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.compose-saved {
+  margin-inline-end: auto;
+  color: var(--text-tertiary);
+  font-size: var(--text-caption);
+}

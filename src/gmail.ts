@@ -476,6 +476,48 @@ class GmailService {
   }
 
   /**
+   * Compose-and-send a brand-new message (no thread).
+   */
+  async sendCompose(
+    accountId: string,
+    message: {
+      to: string;
+      cc?: string;
+      bcc?: string;
+      subject: string;
+      body: string;
+    },
+  ): Promise<string> {
+    const gmail = await this.getGmail(accountId);
+
+    const emailLines = [
+      `To: ${message.to}`,
+      message.cc ? `Cc: ${message.cc}` : '',
+      message.bcc ? `Bcc: ${message.bcc}` : '',
+      `Subject: ${message.subject}`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/plain; charset="UTF-8"',
+      'Content-Transfer-Encoding: 7bit',
+      '',
+      message.body,
+    ]
+      .filter(Boolean)
+      .join('\r\n');
+
+    const encodedMessage = Buffer.from(emailLines)
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    const res = await gmail.users.messages.send({
+      userId: 'me',
+      requestBody: { raw: encodedMessage },
+    });
+
+    return res.data.id!;
+  }
+  /**
    * Extract email address from "Name <email@domain.com>" or just "email@domain.com"
    */
   private extractEmail(from: string): string {
