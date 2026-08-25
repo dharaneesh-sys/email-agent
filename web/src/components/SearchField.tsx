@@ -1,6 +1,7 @@
 import type { RefObject } from 'react';
 import { parseSearchOperators, removeSearchOperator } from '../utils';
 import { SearchIcon, XIcon } from '../icons';
+import { IconButton } from './Button';
 
 interface SearchFieldProps {
   value: string;
@@ -26,9 +27,21 @@ export function SearchField({ value, onChange, inputRef }: SearchFieldProps) {
           spellCheck={false}
           autoComplete="off"
         />
-        <kbd className="search-kbd" aria-hidden="true">
-          /
-        </kbd>
+        {value.length > 0 ? (
+          <IconButton
+            size="sm"
+            label="Clear search"
+            className="search-clear"
+            style={{ position: 'absolute', insetInlineEnd: '4px' }}
+            onClick={() => onChange('')}
+          >
+            <XIcon size={14} />
+          </IconButton>
+        ) : (
+          <kbd className="search-kbd" aria-hidden="true">
+            /
+          </kbd>
+        )}
       </div>
       {operators.length > 0 && (
         <div className="search-chips" role="list" aria-label="Active search operators">

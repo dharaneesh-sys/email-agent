@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import type { AccountStatus, EmailAction, EmailListItem, Filter, LabelInfo, SnoozeDuration, Tone, ToastVariant } from '../types';
 import { api } from '../api';
 import { shortenModelName } from '../utils';
+import { mark } from '../utils/perf';
 import { NavRail, type NavRailAuth, type NavRailCounts } from './NavRail';
 import { SearchField } from './SearchField';
 import { EmailList } from './EmailList';
@@ -15,6 +16,8 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { Toast, type ToastState } from './Toast';
 import { Button, IconButton } from './Button';
 import { RefreshIcon, SparklesIcon } from '../icons';
+
+mark('app:init');
 
 type AuthState =
   | { status: 'checking' }
@@ -241,6 +244,7 @@ export function App() {
       } else {
         setEmails(list);
       }
+      mark('app:emails-loaded');
       if (!append && !importanceInitialized.current && list.length > 0) {
         importanceInitialized.current = true;
         void refreshImportance(true);
@@ -679,6 +683,10 @@ setSearchQuery('');
     }
     void opsRef.current.loadEmails();
   }, [serverQuery]);
+  useEffect(() => {
+    if (selectedEmailId) mark('app:detail-opened');
+  }, [selectedEmailId]);
+
 
   // --- Init sequence + auto-refresh ---------------------------------------
 
@@ -842,21 +850,21 @@ setSearchQuery('');
           <div className="toolbar">
             <SearchField value={searchQuery} onChange={setSearchQuery} inputRef={searchRef} />
             <div className="stat-pills" aria-label="Mailbox statistics">
-              <span className="stat-pill">
+              <span className="stat-pill" aria-label={`Unread emails ${stats.unread ?? 'unknown'}`}>
                 <span className="stat-label">Unread</span>
-                <span className="stat-value">{stats.unread ?? '–'}</span>
+                <span className="stat-value" aria-hidden="true">{stats.unread ?? '–'}</span>
               </span>
-              <span className="stat-pill">
+              <span className="stat-pill" aria-label={`Important emails ${stats.important ?? 'unknown'}`}>
                 <span className="stat-label">Important</span>
-                <span className="stat-value">{stats.important ?? '–'}</span>
+                <span className="stat-value" aria-hidden="true">{stats.important ?? '–'}</span>
               </span>
-              <span className="stat-pill">
+              <span className="stat-pill" aria-label={`Total emails ${stats.total ?? 'unknown'}`}>
                 <span className="stat-label">Total</span>
-                <span className="stat-value">{stats.total ?? '–'}</span>
+                <span className="stat-value" aria-hidden="true">{stats.total ?? '–'}</span>
               </span>
             </div>
             {modelName && (
-              <span className="model-badge">
+              <span className="model-badge" aria-label={`Active model ${modelName}`} role="status">
                 <span className="model-dot" aria-hidden="true" />
                 {modelName}
               </span>
@@ -896,7 +904,7 @@ setSearchQuery('');
             </div>
           )}
           <div className="workspace" data-split={selectedEmailId ? '' : undefined}>
-            <ErrorBoundary>
+            <ErrorBoundary onError={() => notify('Email list crashed — retry', 'error', { actionLabel: 'Retry', onAction: () => window.location.reload() })}>
             <EmailList
               emails={filteredEmails}
               loading={listLoading}
@@ -929,7 +937,7 @@ setSearchQuery('');
               }}
             />
             </ErrorBoundary>
-            <ErrorBoundary>
+            <ErrorBoundary onError={() => notify('Email detail crashed — retry', 'error', { actionLabel: 'Retry', onAction: () => window.location.reload() })}>
             <DetailPane
               email={selectedEmail}
               accountId={currentAccountId}

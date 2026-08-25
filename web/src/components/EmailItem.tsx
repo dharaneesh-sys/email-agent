@@ -30,6 +30,8 @@ interface EmailItemProps {
   selectionMode?: boolean;
   checked?: boolean | undefined;
   onToggleSelect?: ((email: EmailListItem) => void) | undefined;
+  /** Roving tabindex: 0 for active option, -1 otherwise. Computed by EmailList to keep virtualization clean. */
+  rovingTabIndex?: number | undefined;
 }
 
 const FILTERED_LABELS = new Set(['INBOX', 'UNREAD', 'STARRED', 'IMPORTANT']);
@@ -47,6 +49,7 @@ export const EmailItem = memo(function EmailItem({
   selectionMode = false,
   checked = false,
   onToggleSelect,
+  rovingTabIndex,
 }: EmailItemProps) {
   const [snoozeOpen, setSnoozeOpen] = useState(false);
   const snoozeRef = useRef<HTMLDivElement | null>(null);
@@ -93,11 +96,12 @@ export const EmailItem = memo(function EmailItem({
     <article
       className={className}
       data-email-id={email.id}
-      tabIndex={0}
-      aria-current={selected ? 'true' : undefined}
+      role="option"
+      aria-selected={selected}
+      tabIndex={rovingTabIndex !== undefined ? rovingTabIndex : selected ? 0 : -1}
       onClick={open}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' || e.key === ' ') {
           const t = e.target as HTMLElement;
           if (t.closest('button, input')) return;
           e.preventDefault();
@@ -141,7 +145,7 @@ export const EmailItem = memo(function EmailItem({
       <div className="row-content">
         <div className="row-topline">
           <span className="row-sender">{email.from}</span>
-          <time className="row-date" dateTime={email.date}>
+          <time className="row-date" dateTime={email.date} title={new Date(email.date).toLocaleString()}>
             {formatDate(new Date(email.date))}
           </time>
         </div>

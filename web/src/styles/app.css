@@ -2191,7 +2191,8 @@
   background: var(--tint-error);
 }
 
-.visually-hidden {
+.visually-hidden,
+.sr-only {
   position: absolute;
   inline-size: 1px;
   block-size: 1px;
@@ -2201,6 +2202,37 @@
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  z-index: 100;
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-body-sm);
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  left: var(--space-2);
+  top: var(--space-2);
+  inline-size: auto;
+  block-size: auto;
+  overflow: visible;
+  clip-path: none;
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
 }
 
 /* ============ List states (1.4) — typographic, no emoji ============ */

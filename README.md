@@ -14,13 +14,13 @@ bun install
 bun run index.ts
 ```
 
-Serves the React dashboard at `http://localhost:3030/` (built from `web/`, design system in `DESIGN.md`). Requires:
+Serves the SPA (web/dist) at `http://localhost:3030/` and the API at `/api/*` (built from `web/`, design system in `DESIGN.md`). Only `web/dist` is served — `legacy/dashboard.html` is archived and returns 404. Requires:
 - Gmail OAuth credentials (see `.env` — `.env.example` documents the required keys)
 - A NIM-compatible LLM endpoint (defaults to localhost, overridable via env)
 
 ### Frontend
 
-The SPA lives in `web/` (Vite + React 19 + TS). Dev server proxies `/api` to the running Hono server:
+The SPA lives in `web/` (Vite + React 19 + TS) and is served from `web/dist` at `/` with SPA fallback (`/settings`, etc. → `index.html`); hashed assets at `/assets/*` are immutable. Dev server proxies `/api` to the running Hono server:
 
 ```bash
 cd web && bun install && bun run dev   # http://localhost:5173

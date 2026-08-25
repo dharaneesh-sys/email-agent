@@ -795,7 +795,22 @@ app.get(
 );
 app.get('/favicon.ico', (c) => c.body(null, 204));
 
-// Serve static files (dashboard.html, CSS, JS, etc.)
-app.get('/*', serveStatic({ root: './' }));
+// SPA fallback: serve static assets from web/dist; unknown file-less routes serve index.html.
+// Legacy dashboard.html is not in web/dist and will 404 via the dot-file guard below.
+app.get('/*', serveStatic({ root: './web/dist' }));
+
+app.notFound(async (c) => {
+  const path = c.req.path;
+  if (path.startsWith('/api/')) {
+    return c.json({ error: 'Not found' }, 404);
+  }
+  // File-like paths (contain an extension) that weren't found in web/dist should 404
+  // rather than returning the SPA shell — this ensures /dashboard.html 404s.
+  if (/\.[a-zA-Z0-9]+$/.test(path)) {
+    return c.text('Not found', 404);
+  }
+  const html = await Bun.file('./web/dist/index.html').text();
+  return c.html(html);
+});
 
 export default app;

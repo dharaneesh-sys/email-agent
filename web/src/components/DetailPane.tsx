@@ -234,7 +234,16 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack, onRepl
   const showFullEmail = fullEmailOpen && renderedBody !== '';
 
   return (
-    <aside className={`detail-pane${email ? ' is-open' : ''}`} aria-label="Email details">
+    <aside
+      className={`detail-pane${email ? ' is-open' : ''}`}
+      role="region"
+      aria-label="Email detail"
+      aria-live="polite"
+    >
+      {/* Live announcement when a new email is opened — screen readers hear subject+sender */}
+      <p role="status" aria-live="polite" aria-atomic="true" className="visually-hidden">
+        {email ? `Opened ${activeSnapshot?.subject ?? email.subject} from ${activeSnapshot?.from ?? email.from}` : ''}
+      </p>
       <div className="detail-backdrop" onClick={onBack} aria-hidden="true" />
       <div className="detail-sheet">
         {email ? (
