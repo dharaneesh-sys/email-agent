@@ -105,7 +105,7 @@ function walkNvapiValues(value: Record<string, unknown>): string | null {
 export const NIM_CONFIG = {
   baseUrl: process.env['NIM_BASE_URL'] || 'https://integrate.api.nvidia.com/v1',
   apiKey: extractNimApiKey(),
-  defaultModel: process.env['NIM_DEFAULT_MODEL'] || 'meta/llama-3.1-70b-instruct',
+  defaultModel: process.env['NIM_DEFAULT_MODEL'] || 'nvidia/nemotron-3-super-120b-a12b',
   modelEnvOverride: process.env['MODEL_ID']?.trim() || null,
   generatedModelPath: join(process.cwd(), 'src', 'generated-model.json'),
   timeoutMs: Number(process.env['NIM_TIMEOUT_MS'] ?? 90000),

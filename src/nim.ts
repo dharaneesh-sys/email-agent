@@ -4,44 +4,20 @@
 
 import { NIM_CONFIG } from './config'
 
-// Models verified to work with the project's NVIDIA API key (23 total).
+// Models verified 2026-09-02 — previous meta/llama-3.1* EOL 2026-08-26 (410 Gone).
 export const NIM_WORKING_MODELS: readonly string[] = [
-  'deepseek-ai/deepseek-v4-pro',
-  'meta/llama-3.1-70b-instruct',
-  'meta/llama-3.1-8b-instruct',
-  'meta/llama-3.2-11b-vision-instruct',
-  'meta/llama-3.2-1b-instruct',
-  'meta/llama-3.2-3b-instruct',
-  'meta/llama-3.2-90b-vision-instruct',
-  'mistralai/mistral-nemotron',
-  'nvidia/ising-calibration-1.5-31b',
-  'nvidia/llama-3.1-nemoguard-8b-content-safety',
-  'nvidia/llama-3.1-nemotron-nano-vl-8b-v1',
-  'nvidia/llama-3.1-nemotron-safety-guard-8b-v3',
-  'nvidia/llama-3.3-nemotron-super-49b-v1',
-  'nvidia/nemotron-3.5-content-safety',
-  'nvidia/nemotron-3-nano-30b-a3b',
-  'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
   'nvidia/nemotron-3-super-120b-a12b',
+  'nvidia/nemotron-3.5-lightning-30b-a3b',
   'nvidia/nemotron-3-ultra-550b-a55b',
-  'nvidia/nemotron-mini-4b-instruct',
-  'nvidia/nemotron-nano-12b-v2-vl',
-  'nvidia/riva-translate-4b-instruct-v1.1',
-  'nvidia/riva-translate-4b-instruct-v2',
-  'poolside/laguna-xs-2.1',
+  'meta/llama-3.2-11b-vision-instruct',
+  'meta/llama-3.2-90b-vision-instruct',
 ]
 
-// Subset of NIM_WORKING_MODELS suited to email summarization/reply tasks.
+// Email candidates — JSON mode tested; 3.5-lightning emits thinking trace, so keep super-120b primary.
 export const NIM_EMAIL_CANDIDATES: readonly string[] = [
-  'deepseek-ai/deepseek-v4-pro',
-  'meta/llama-3.1-70b-instruct',
-  'meta/llama-3.1-8b-instruct',
-  'meta/llama-3.2-3b-instruct',
-  'nvidia/llama-3.3-nemotron-super-49b-v1',
-  'nvidia/nemotron-3-nano-30b-a3b',
   'nvidia/nemotron-3-super-120b-a12b',
-  'nvidia/nemotron-3-ultra-550b-a55b',
-  'nvidia/nemotron-mini-4b-instruct',
+  'meta/llama-3.2-11b-vision-instruct',
+  'nvidia/nemotron-3.5-lightning-30b-a3b',
 ]
 
 export interface NimMessage {
