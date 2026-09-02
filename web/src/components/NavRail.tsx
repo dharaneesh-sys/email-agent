@@ -56,6 +56,16 @@ export function NavRail({
   const busyLabel = (busy: NavRailBusy | null, id: string, fallback: string) =>
     busy?.accountId === id ? (busy.action === 'connect' ? 'Connecting…' : 'Disconnecting…') : fallback;
 
+  const expiryBadge = (acc: AccountStatus): { text: string; tone: 'warn' | 'danger' } | null => {
+    if (!acc.authenticated) return null;
+    if (acc.refreshTokenPresent === false) return { text: 'No refresh — reconnect', tone: 'danger' };
+    if (typeof acc.daysRemaining === 'number') {
+      if (acc.daysRemaining <= 1) return { text: acc.daysRemaining <= 0 ? 'Expired — reconnect' : 'Expires in 1 day', tone: 'danger' };
+      if (acc.daysRemaining <= 3) return { text: `Expires in ${acc.daysRemaining} days`, tone: 'warn' };
+    }
+    return null;
+  };
+
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const railRef = useRef<HTMLElement | null>(null);
 
@@ -142,6 +152,7 @@ export function NavRail({
                   </div>
                   <span className="rail-account-text rail-account-text--collapsed" aria-hidden="true">
                     <span className="rail-account-label">{acc.label ?? acc.id}</span>
+                    {(() => { const b = expiryBadge(acc); return b ? <span className={`rail-expiry-badge is-${b.tone}`} title={b.text}>{b.text}</span> : null; })()}
                   </span>
                   <button
                     type="button"

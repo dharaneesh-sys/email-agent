@@ -2,7 +2,7 @@
 // Reuses Google OAuth credentials from ClutchD-Backend where available
 
 import { z } from 'zod';
-import { join } from 'node:path'
+import { isAbsolute, join } from 'node:path'
 
 // Load environment variables
 const CLIENT_ID = process.env['GOOGLE_OAUTH_CLIENT_ID'] || '710446274779-8kn2hpj6bl7014gv19a63lipnehdedun.apps.googleusercontent.com';
@@ -23,7 +23,14 @@ export const GOOGLE_OAUTH_CONFIG = {
     'openid',
   ],
   // Token storage directory
-  tokenStorageDir: (process.env['HOME'] || '/tmp') + '/.config/email-agent/tokens/',
+  tokenStorageDir: (() => {
+    const envDir = process.env['EMAIL_AGENT_TOKEN_DIR']?.trim();
+    if (envDir && isAbsolute(envDir)) {
+      // Use env var directly as absolute dir; ensure single trailing slash
+      return envDir.endsWith('/') ? envDir : envDir + '/';
+    }
+    return (process.env['HOME'] || '/tmp') + '/.config/email-agent/tokens/';
+  })(),
 };
 
 // Email account configuration

@@ -45,17 +45,21 @@ export function SettingsPane({ open, onClose, currentModel, onModelChanged }: Se
   const [models, setModels] = useState<readonly string[]>([]);
   const [modelBusy, setModelBusy] = useState(false);
   const [modelError, setModelError] = useState<string | null>(null);
-
+  const [authHealth, setAuthHealth] = useState<import('../types').AccountStatus[] | null>(null);
+  const [healthBusy, setHealthBusy] = useState<string | null>(null);
   useEffect(() => {
     if (!open) return;
     setTheme(loadThemeSetting());
     setModelError(null);
     let cancelled = false;
     void api.config().catch(() => null);
-    // Candidate list is static server-side; reuse the known candidates client-side.
     import('../utils').then(({ NIM_MODEL_CANDIDATES }) => {
       if (!cancelled) setModels(NIM_MODEL_CANDIDATES);
     });
+    void api
+      .diagnostics()
+      .then((d) => { if (!cancelled) setAuthHealth(d.accounts); })
+      .catch(() => { if (!cancelled) setAuthHealth(null); });
     return () => {
       cancelled = true;
     };
@@ -175,6 +179,47 @@ export function SettingsPane({ open, onClose, currentModel, onModelChanged }: Se
             )}
           </section>
 
+          <section className="settings-section" aria-label="Connected accounts health">
+            <h3>Accounts health</h3>
+            {!authHealth ? (
+              <p className="detail-muted">Loading…</p>
+            ) : (
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {authHealth.map((acc) => {
+                  const badge = !acc.authenticated
+                    ? 'Not connected'
+                    : acc.refreshTokenPresent === false
+                      ? 'No refresh — reconnect'
+                      : typeof acc.daysRemaining === 'number' && acc.daysRemaining <= 3
+                        ? `Expires in ${acc.daysRemaining} day${acc.daysRemaining === 1 ? '' : 's'}`
+                        : acc.hasValidToken
+                          ? 'Healthy'
+                          : 'Needs refresh';
+                  const isWarn = badge.includes('Expires') || badge.includes('Needs');
+                  const isDanger = badge.includes('No refresh') || badge.includes('Not connected');
+                  return (
+                    <li key={acc.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '8px 10px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', background: 'var(--surface-secondary)' }}>
+                      <span style={{ minWidth: 0 }}>
+                        <span style={{ fontWeight: 600, fontSize: 'var(--text-body-sm)' }}>{acc.id}</span>
+                        <span style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-caption)', marginLeft: 8 }}>{acc.email ?? ''}</span>
+                        <span className={`health-badge is-${isDanger ? 'danger' : isWarn ? 'warn' : 'ok'}`} style={{ marginLeft: 8, fontSize: 'var(--text-caption)', padding: '2px 6px', borderRadius: 'var(--radius-pill)', border: '1px solid var(--border-default)' }}>{badge}</span>
+                      </span>
+                      <Button
+                        variant="secondary"
+                        disabled={healthBusy === acc.id || acc.refreshTokenPresent === false}
+                        onClick={async () => {
+                          setHealthBusy(acc.id);
+                          try { await api.refreshAuth(acc.id); const d = await api.diagnostics(); setAuthHealth(d.accounts); } catch {} finally { setHealthBusy(null); }
+                        }}
+                      >
+                        {healthBusy === acc.id ? 'Refreshing…' : 'Refresh now'}
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
           <section className="settings-section" aria-label="Keyboard shortcuts">
             <h3>Keyboard shortcuts</h3>
             <dl className="shortcut-list">

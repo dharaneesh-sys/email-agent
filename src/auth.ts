@@ -3,7 +3,7 @@
 
 import { google } from 'googleapis';
 import { join } from 'node:path';
-import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
+import { chmodSync, closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, statSync, writeFileSync, unlinkSync } from 'node:fs';
 import { GOOGLE_OAUTH_CONFIG, EMAIL_ACCOUNTS } from './config';
 
 // Token interface for storage
@@ -22,14 +22,39 @@ type GmailOAuthClient = any;
 class AuthManager {
   private clients: Map<string, GmailOAuthClient> = new Map();
   private tokens: Map<string, StoredToken> = new Map();
-
+  private fileMtimes: Map<string, number> = new Map();
+  private lastRefreshAt: Map<string, number> = new Map();
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private authRefreshTimer: ReturnType<typeof setInterval> | null = null;
   constructor() {
-    // Ensure token storage directory exists
+    // Ensure token storage directory exists with restricted permissions
     if (!existsSync(GOOGLE_OAUTH_CONFIG.tokenStorageDir)) {
-      mkdirSync(GOOGLE_OAUTH_CONFIG.tokenStorageDir, { recursive: true });
+      mkdirSync(GOOGLE_OAUTH_CONFIG.tokenStorageDir, { recursive: true, mode: 0o700 });
+      try { chmodSync(GOOGLE_OAUTH_CONFIG.tokenStorageDir, 0o700); } catch {}
+    } else {
+      try { chmodSync(GOOGLE_OAUTH_CONFIG.tokenStorageDir, 0o700); } catch {}
     }
     // Load existing tokens
     this.loadAllTokens();
+    // Poll every 60s for out-of-process writes
+    this.pollTimer = setInterval(() => {
+      for (const account of EMAIL_ACCOUNTS) {
+        this.reloadFromDisk(account.id);
+      }
+    }, 60_000);
+    // Allow process to exit even if timer is active
+    if (this.pollTimer && typeof (this.pollTimer as unknown as { unref?: () => void }).unref === 'function') {
+      (this.pollTimer as unknown as { unref: () => void }).unref();
+    }
+    // Proactive refresh: every 6h, refresh tokens expiring within 30min or <3 days
+    const scheduleRefresh = () => {
+      for (const account of EMAIL_ACCOUNTS) void this.refreshIfNeeded(account.id);
+    };
+    setTimeout(scheduleRefresh, 30_000);
+    this.authRefreshTimer = setInterval(scheduleRefresh, 6 * 60 * 60 * 1000);
+    if (this.authRefreshTimer && typeof (this.authRefreshTimer as unknown as { unref?: () => void }).unref === 'function') {
+      (this.authRefreshTimer as unknown as { unref: () => void }).unref();
+    }
   }
 
   /**
@@ -68,9 +93,28 @@ class AuthManager {
    */
   private saveToken(accountId: string, token: StoredToken): void {
     const tokenPath = this.getTokenPath(accountId);
+    // Preserve existing refresh_token if incoming is null (Google only returns it on first consent)
+    if (!token.refresh_token) {
+      const existing = this.tokens.get(accountId)?.refresh_token ?? this.loadToken(accountId)?.refresh_token ?? null;
+      if (existing) token.refresh_token = existing;
+    }
     try {
-      writeFileSync(tokenPath, JSON.stringify(token, null, 2), 'utf8');
+      const tmpPath = `${tokenPath}.tmp`;
+      writeFileSync(tmpPath, JSON.stringify(token, null, 2), { mode: 0o600 });
+      try { chmodSync(tmpPath, 0o600); } catch {}
+      // fsync tmp file to ensure durability before rename
+      try {
+        const fd = openSync(tmpPath, 'r');
+        fsyncSync(fd);
+        closeSync(fd);
+      } catch {}
+      renameSync(tmpPath, tokenPath);
+      try { chmodSync(tokenPath, 0o600); } catch {}
       this.tokens.set(accountId, token);
+      try {
+        const st = statSync(tokenPath);
+        this.fileMtimes.set(accountId, st.mtimeMs);
+      } catch {}
     } catch (error) {
       console.error(`Failed to save token for ${accountId}:`, error);
     }
@@ -90,7 +134,21 @@ class AuthManager {
     for (const account of EMAIL_ACCOUNTS) {
       const token = this.loadToken(account.id);
       if (token) {
+        // Heal null refresh_token: keep in-memory non-null if disk lost it
+        if (token.refresh_token === null) {
+          const memRefresh = this.tokens.get(account.id)?.refresh_token ?? null;
+          if (memRefresh) {
+            token.refresh_token = memRefresh;
+            console.warn(`Healed null refresh_token for ${account.id} from memory`);
+          } else {
+            console.warn(`Token for ${account.id} has null refresh_token — will require re-authentication when access token expires`);
+          }
+        }
         this.tokens.set(account.id, token);
+        try {
+          const st = statSync(this.getTokenPath(account.id));
+          this.fileMtimes.set(account.id, st.mtimeMs);
+        } catch {}
         // Set credentials on the client
         const client = this.getClient(account.id);
         client.setCredentials({
@@ -101,6 +159,73 @@ class AuthManager {
           token_type: token.token_type,
         });
       }
+    }
+  }
+
+  /**
+   * Reload token from disk if disk is newer than memory.
+   * Compares expiry_date and refresh_token, updating memory if disk is newer.
+   */
+  reloadFromDisk(accountId: string): void {
+    const tokenPath = this.getTokenPath(accountId);
+    if (!existsSync(tokenPath)) return;
+    let mtimeMs: number | null = null;
+    try {
+      const st = statSync(tokenPath);
+      mtimeMs = st.mtimeMs;
+      const cached = this.fileMtimes.get(accountId);
+      // If we have a cached mtime and file hasn't changed, skip read
+      if (cached !== undefined && mtimeMs <= cached) {
+        // Still check if we should skip even when mtime unchanged; avoid unnecessary I/O
+        // but allow reload if memory is missing
+        if (this.tokens.has(accountId)) return;
+      }
+    } catch {
+      // fall through to read attempt
+    }
+    const diskToken = this.loadToken(accountId);
+    if (!diskToken) return;
+    const memToken = this.tokens.get(accountId);
+    if (!memToken) {
+      // No memory token — heal null refresh already handled in load path but log here too
+      if (diskToken.refresh_token === null) {
+        console.warn(`Token for ${accountId} has null refresh_token — will require re-authentication when access token expires`);
+      }
+      this.tokens.set(accountId, diskToken);
+      if (mtimeMs !== null) this.fileMtimes.set(accountId, mtimeMs);
+      const client = this.getClient(accountId);
+      client.setCredentials({
+        access_token: diskToken.access_token,
+        refresh_token: diskToken.refresh_token,
+        expiry_date: diskToken.expiry_date,
+        scope: diskToken.scope,
+        token_type: diskToken.token_type,
+      });
+      return;
+    }
+    // Heal disk null refresh from memory before comparison
+    if (diskToken.refresh_token === null && memToken.refresh_token) {
+      diskToken.refresh_token = memToken.refresh_token;
+    }
+    // If disk is newer (higher expiry_date) or has a refresh_token that memory lacks, update memory
+    const diskNewer = diskToken.expiry_date > memToken.expiry_date;
+    const diskHasRefreshMemMissing = !!diskToken.refresh_token && !memToken.refresh_token;
+    const shouldUpdate = diskNewer || diskHasRefreshMemMissing || mtimeMs === null || (this.fileMtimes.get(accountId) !== undefined && mtimeMs > (this.fileMtimes.get(accountId) ?? 0));
+    if (shouldUpdate) {
+      // Prefer disk if newer; preserve refresh_token if disk lost it
+      if (!diskToken.refresh_token && memToken.refresh_token) {
+        diskToken.refresh_token = memToken.refresh_token;
+      }
+      this.tokens.set(accountId, diskToken);
+      if (mtimeMs !== null) this.fileMtimes.set(accountId, mtimeMs);
+      const client = this.getClient(accountId);
+      client.setCredentials({
+        access_token: diskToken.access_token,
+        refresh_token: diskToken.refresh_token,
+        expiry_date: diskToken.expiry_date,
+        scope: diskToken.scope,
+        token_type: diskToken.token_type,
+      });
     }
   }
 
@@ -128,6 +253,8 @@ class AuthManager {
    * Get valid access token for an account, refreshing if necessary
    */
   async getAccessToken(accountId: string): Promise<string> {
+    // Reconcile disk vs memory: pick up out-of-process writes before validity check
+    this.reloadFromDisk(accountId);
     const client = this.getClient(accountId);
     const stored = this.tokens.get(accountId);
 
@@ -135,7 +262,6 @@ class AuthManager {
     if (stored && this.hasValidToken(accountId)) {
       return stored.access_token;
     }
-
     // Otherwise, try to refresh
     if (stored?.refresh_token) {
       try {
@@ -155,6 +281,7 @@ class AuthManager {
           token_type: 'Bearer',
         };
         this.saveToken(accountId, newToken);
+        this.lastRefreshAt.set(accountId, Date.now());
         return newToken.access_token;
       } catch (error) {
         console.error(`Failed to refresh token for ${accountId}:`, error);
@@ -170,12 +297,12 @@ class AuthManager {
    */
   getAuthUrl(accountId: string): string {
     const client = this.getClient(accountId);
-    console.log('redirectUri:', GOOGLE_OAUTH_CONFIG.redirectUri); // Debug line
     const authUrl = client.generateAuthUrl({
       access_type: 'offline',
       scope: GOOGLE_OAUTH_CONFIG.scopes,
-      prompt: 'consent', // Always show consent screen to get refresh token
-      state: accountId, // Pass account ID in state to know which account we're authenticating for
+      prompt: 'consent',
+      include_granted_scopes: true,
+      state: accountId,
     });
     return authUrl;
   }
@@ -194,8 +321,12 @@ class AuthManager {
       // Store tokens
       const storedToken: StoredToken = {
         access_token: tokens.access_token!,
-        refresh_token: tokens.refresh_token ?? null,
-        expiry_date: tokens.expiry_date!,
+        refresh_token:
+          tokens.refresh_token ??
+          this.tokens.get(accountId)?.refresh_token ??
+          this.loadToken(accountId)?.refresh_token ??
+          null,
+        expiry_date: tokens.expiry_date ?? Date.now() + 3600_000,
         scope: tokens.scope ?? '',
         token_type: 'Bearer',
       };
@@ -212,15 +343,19 @@ class AuthManager {
    * Sign out an account (remove tokens)
    */
   signOut(accountId: string): void {
+    const client = this.clients.get(accountId);
+    if (client) {
+      try { void client.revokeCredentials().catch(() => {}); } catch {}
+    }
     this.tokens.delete(accountId);
     this.clients.delete(accountId);
+    this.fileMtimes.delete(accountId);
+    this.lastRefreshAt.delete(accountId);
     const tokenPath = this.getTokenPath(accountId);
     try {
-      if (existsSync(tokenPath)) {
-        unlinkSync(tokenPath);
-      }
+      if (existsSync(tokenPath)) unlinkSync(tokenPath);
     } catch {
-      // Ignore if file doesn't exist or can't be deleted
+      // Ignore
     }
   }
 
@@ -232,6 +367,53 @@ class AuthManager {
     return EMAIL_ACCOUNTS
       .filter(acc => !this.isConnected(acc.id))
       .map(acc => acc.id);
+  }
+
+  getTokenDiagnostics(accountId: string): {
+    id: string;
+    expiryDate: number | null;
+    daysRemaining: number | null;
+    refreshTokenPresent: boolean;
+    hasValidToken: boolean;
+    isConnected: boolean;
+    fileExists: boolean;
+    lastRefreshAt: number | null;
+  } {
+    const token = this.tokens.get(accountId) ?? this.loadToken(accountId);
+    const fileExists = existsSync(this.getTokenPath(accountId));
+    const expiryDate = token?.expiry_date ?? null;
+    const daysRemaining = expiryDate !== null ? Math.floor((expiryDate - Date.now()) / 86400000) : null;
+    return {
+      id: accountId,
+      expiryDate,
+      daysRemaining,
+      refreshTokenPresent: !!token?.refresh_token,
+      hasValidToken: this.hasValidToken(accountId),
+      isConnected: this.isConnected(accountId),
+      fileExists,
+      lastRefreshAt: this.lastRefreshAt.get(accountId) ?? null,
+    };
+  }
+
+  async refreshIfNeeded(accountId: string): Promise<boolean> {
+    const stored = this.tokens.get(accountId) ?? this.loadToken(accountId);
+    if (!stored) return false;
+    if (!stored.refresh_token) return false;
+    const expiresInMs = stored.expiry_date - Date.now();
+    const hoursRemaining = expiresInMs / 3_600_000;
+    const daysRemaining = expiresInMs / 86_400_000;
+    const shouldRefresh = expiresInMs < 30 * 60 * 1000 || daysRemaining < 3 || !this.hasValidToken(accountId);
+    if (!shouldRefresh) return false;
+    const start = Date.now();
+    try {
+      await this.getAccessToken(accountId);
+      this.lastRefreshAt.set(accountId, Date.now());
+      console.log(`[AuthRefresh] refreshed ${accountId} in ${Date.now() - start}ms (was ${hoursRemaining.toFixed(1)}h remaining)`);
+      return true;
+    } catch (error) {
+      console.warn(`[AuthRefresh] failed for ${accountId}:`, error instanceof Error ? error.message : String(error));
+      return false;
+    }
   }
 }
 

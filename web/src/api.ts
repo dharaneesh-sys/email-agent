@@ -107,8 +107,9 @@ export const api = {
     changes: { add?: string[]; remove?: string[] },
     accountId: string,
   ) => post<LabelApplyResponse>('/api/labels/apply', { ids, ...changes, accountId }),
+  diagnostics: () => get<{ accounts: import('./types').AccountStatus[]; hint: string; docs: string[] }>('/api/auth/diagnostics'),
+  refreshAuth: (accountId?: string) => post<{ success: boolean; accountId?: string; expiryDate?: number | null; daysRemaining?: number | null; results?: unknown[] }>('/api/auth/refresh', accountId ? { accountId } : {}),
 };
-
 export function attachmentUrl(id: string, attachment: EmailAttachment, account: string): string {
   const params = new URLSearchParams({
     account,

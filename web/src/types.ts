@@ -21,6 +21,12 @@ export interface AccountStatus {
   label?: string;
   authenticated: boolean;
   needsAuth: boolean;
+  refreshTokenPresent?: boolean;
+  expiryDate?: number | null;
+  daysRemaining?: number | null;
+  hasValidToken?: boolean;
+  fileExists?: boolean;
+  lastRefreshAt?: number | null;
 }
 
 // --- API response envelopes (server returns bare objects, not ApiResponse) ---

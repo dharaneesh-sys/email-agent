@@ -87,17 +87,67 @@ app.post('/api/config', zValidator('json', z.object({
   return c.json({ success: true, model: info.model });
 });
 
-// Get authentication status for all accounts
+// Get authentication status for all accounts (extended with expiry diagnostics)
 app.get('/api/auth/status', async (c) => {
-  const status = await Promise.all(
-    EMAIL_ACCOUNTS.map(async (acc) => ({
+  const status = EMAIL_ACCOUNTS.map((acc) => {
+    const diag = authManager.getTokenDiagnostics(acc.id);
+    return {
       id: acc.id,
       email: acc.email,
-      authenticated: authManager.isConnected(acc.id),
+      authenticated: diag.isConnected,
       needsAuth: authManager.getAccountsNeedingAuth().includes(acc.id),
-    }))
-  );
+      refreshTokenPresent: diag.refreshTokenPresent,
+      expiryDate: diag.expiryDate,
+      daysRemaining: diag.daysRemaining,
+      hasValidToken: diag.hasValidToken,
+      fileExists: diag.fileExists,
+      lastRefreshAt: diag.lastRefreshAt,
+    };
+  });
+  c.header('Cache-Control', 'no-store');
   return c.json({ accounts: status });
+});
+
+// Detailed diagnostics for auth (publishing-status hint + per-account expiry)
+app.get('/api/auth/diagnostics', async (c) => {
+  const accounts = EMAIL_ACCOUNTS.map((acc) => authManager.getTokenDiagnostics(acc.id));
+  c.header('Cache-Control', 'no-store');
+  return c.json({
+    accounts,
+    hint: 'If your OAuth consent screen Publishing status is Testing, refresh tokens expire after 7 days (Google policy) — move to Production at console.cloud.google.com → OAuth consent screen → Publishing status → In production. This is the leading cause of 15-day logout when two accounts drift.',
+    docs: [
+      'https://developers.google.com/identity/protocols/oauth2#expiration',
+      'https://support.google.com/cloud/answer/13464325',
+    ],
+  });
+});
+
+// Manual refresh trigger (proactive scheduler also runs every 6h)
+app.post('/api/auth/refresh', async (c) => {
+  const body = await c.req.json().catch(() => ({} as Record<string, unknown>));
+  const parsed = z.object({ accountId: z.string().optional() }).safeParse(body ?? {});
+  const accountId = parsed.success ? parsed.data.accountId : undefined;
+  c.header('Cache-Control', 'no-store');
+  if (accountId) {
+    if (!EMAIL_ACCOUNTS.some((a) => a.id === accountId)) throw new HTTPException(400, { message: 'Invalid account ID' });
+    const diagBefore = authManager.getTokenDiagnostics(accountId);
+    if (!diagBefore.refreshTokenPresent) throw new HTTPException(400, { message: `No refresh_token for ${accountId} — re-auth required` });
+    try {
+      await authManager.getAccessToken(accountId);
+      const diag = authManager.getTokenDiagnostics(accountId);
+      return c.json({ success: true, accountId, expiryDate: diag.expiryDate, daysRemaining: diag.daysRemaining });
+    } catch (e) {
+      throw new HTTPException(401, { message: e instanceof Error ? e.message : 'Refresh failed' });
+    }
+  }
+  // refresh all
+  const results: Record<string, unknown>[] = [];
+  for (const acc of EMAIL_ACCOUNTS) {
+    const before = authManager.getTokenDiagnostics(acc.id);
+    if (!before.refreshTokenPresent) { results.push({ accountId: acc.id, success: false, error: 'No refresh_token' }); continue; }
+    try { await authManager.getAccessToken(acc.id); const after = authManager.getTokenDiagnostics(acc.id); results.push({ accountId: acc.id, success: true, expiryDate: after.expiryDate, daysRemaining: after.daysRemaining }); } catch (e) { results.push({ accountId: acc.id, success: false, error: e instanceof Error ? e.message : String(e) }); }
+  }
+  return c.json({ success: true, results });
 });
 
 // Get authorization URL for an account

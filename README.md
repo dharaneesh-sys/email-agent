@@ -15,9 +15,9 @@ bun run index.ts
 ```
 
 Serves the SPA (web/dist) at `http://localhost:3030/` and the API at `/api/*` (built from `web/`, design system in `DESIGN.md`). Only `web/dist` is served — `legacy/dashboard.html` is archived and returns 404. Requires:
-- Gmail OAuth credentials (see `.env` — `.env.example` documents the required keys)
+- Gmail OAuth credentials (see `.env` — `.env.example` documents the required keys). **MUST**: if your OAuth consent screen **Publishing status is Testing**, refresh tokens expire after **7 days** (Google policy) — this is the leading cause of the 15-day logout when two accounts drift. Move to **Production** at `console.cloud.google.com → OAuth consent screen → Publishing status → In production`, verify `https://www.googleapis.com/auth/gmail.*` scopes, and see https://developers.google.com/identity/protocols/oauth2#expiration + https://support.google.com/cloud/answer/13464325. Code persists refresh_token across re-consent and proactively refreshes every 6h, but cannot extend Google's 7-day Testing window.
 - A NIM-compatible LLM endpoint (defaults to localhost, overridable via env)
-
+- Token persistence: set `EMAIL_AGENT_TOKEN_DIR=/data/tokens` and mount a volume (Docker: `email-agent-tokens:/data/tokens`) so `token_*.json` survives restarts — see `GET /api/auth/diagnostics` and `POST /api/auth/refresh` for health.
 ### Frontend
 
 The SPA lives in `web/` (Vite + React 19 + TS) and is served from `web/dist` at `/` with SPA fallback (`/settings`, etc. → `index.html`); hashed assets at `/assets/*` are immutable. Dev server proxies `/api` to the running Hono server:

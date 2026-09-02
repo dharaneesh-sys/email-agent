@@ -415,10 +415,35 @@
   flex: 1;
   min-width: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--text-caption);
   color: var(--text-tertiary);
+}
+
+.rail-expiry-badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-default);
+  white-space: nowrap;
+}
+
+.rail-expiry-badge.is-warn {
+  color: var(--status-warning);
+  background: var(--tint-warning);
+  border-color: color-mix(in srgb, var(--status-warning) 35%, transparent);
+}
+
+.rail-expiry-badge.is-danger {
+  color: var(--status-error);
+  background: var(--tint-error);
+  border-color: color-mix(in srgb, var(--status-error) 35%, transparent);
 }
 
 .rail-account-menu {
