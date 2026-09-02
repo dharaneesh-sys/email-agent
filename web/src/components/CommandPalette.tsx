@@ -1,6 +1,8 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as RKeyboardEvent } from 'react';
 import type { EmailAction, EmailListItem } from '../types';
+import { api } from '../api';
+import { mark } from '../utils/perf';
 
 interface CommandPaletteProps {
   open: boolean;
@@ -11,6 +13,8 @@ interface CommandPaletteProps {
   onSelectEmail(email: EmailListItem): void;
   onAction(email: EmailListItem, action: EmailAction): void;
   onReply(email: EmailListItem): void;
+  onShowStats?(): void;
+  onReconnect?(): void;
 }
 
 interface PaletteItem {
@@ -39,16 +43,21 @@ export function CommandPalette({
   onSelectEmail,
   onAction,
   onReply,
+  onShowStats,
+  onReconnect,
 }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const prevFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
+    prevFocusRef.current = document.activeElement as HTMLElement | null;
     setQuery('');
     setActiveIdx(0);
+    mark('palette:open');
     const t = window.setTimeout(() => inputRef.current?.focus(), 30);
     return () => window.clearTimeout(t);
   }, [open]);
@@ -62,6 +71,94 @@ export function CommandPalette({
       keywords: email.snippet ?? '',
       run: () => onSelectEmail(email),
     }));
+
+    const staticItems: PaletteItem[] = [
+      {
+        key: 'act-show-stats',
+        section: 'Actions',
+        label: 'Show stats',
+        detail: 'Mailbox statistics',
+        keywords: 'show stats mailbox unread important total statistics',
+        run: () => {
+          if (onShowStats) onShowStats();
+          else window.dispatchEvent(new CustomEvent('email-agent:show-stats'));
+        },
+      },
+      {
+        key: 'act-reconnect',
+        section: 'Actions',
+        label: 'Reconnect Gmail',
+        detail: 'Re-authenticate Google account',
+        keywords: 'reconnect gmail auth google re-authenticate connect',
+        run: () => {
+          if (onReconnect) { onReconnect(); return; }
+          void (async () => {
+            try {
+              const status = await api.authStatus();
+              const list = status.accounts ?? [];
+              const target = list.find((a) => a.authenticated) ?? list[0] ?? null;
+              const accountId = target?.id ?? 'primary';
+              const data = await api.authUrl(accountId);
+              if (data.authUrl) window.location.href = data.authUrl;
+            } catch {
+              // silent — auth endpoint may be unavailable
+            }
+          })();
+        },
+      },
+      {
+        key: 'act-toggle-theme',
+        section: 'Actions',
+        label: 'Toggle theme',
+        detail: 'Cycle system / light / dark',
+        keywords: 'toggle theme light dark system appearance',
+        run: () => {
+          try {
+            const key = 'email-agent:theme';
+            const cur = localStorage.getItem(key);
+            const curNorm = cur === 'light' || cur === 'dark' || cur === 'system' ? cur : 'system';
+            const next = curNorm === 'system' ? 'light' : curNorm === 'light' ? 'dark' : 'system';
+            localStorage.setItem(key, next);
+            const systemLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+            const effective = next === 'system' ? (systemLight ? 'light' : 'dark') : next;
+            if (effective === 'light') document.documentElement.setAttribute('data-theme', 'light');
+            else document.documentElement.removeAttribute('data-theme');
+          } catch {
+            // storage unavailable
+          }
+        },
+      },
+    ];
+
+    if (activeEmail) {
+      staticItems.push({
+        key: 'act-copy-link',
+        section: 'Actions',
+        label: 'Copy email link',
+        detail: activeEmail.subject || '(No Subject)',
+        keywords: 'copy email link clipboard url share',
+        run: () => {
+          const url = `${window.location.origin}${window.location.pathname}#email-${activeEmail.id}`;
+          const fallback = () => {
+            try {
+              const ta = document.createElement('textarea');
+              ta.value = url;
+              ta.setAttribute('readonly', '');
+              ta.style.position = 'fixed';
+              ta.style.opacity = '0';
+              document.body.appendChild(ta);
+              ta.select();
+              document.execCommand('copy');
+              document.body.removeChild(ta);
+            } catch {
+              // ignore
+            }
+          };
+          if (navigator.clipboard?.writeText) void navigator.clipboard.writeText(url).catch(fallback);
+          else fallback();
+        },
+      });
+    }
 
     const actionItems: PaletteItem[] = [];
     if (activeEmail) {
@@ -101,8 +198,8 @@ export function CommandPalette({
         },
       );
     }
-    return [...actionItems, ...emailItems];
-  }, [emails, activeEmail, onSelectEmail, onAction, onReply]);
+    return [...staticItems, ...actionItems, ...emailItems];
+  }, [emails, activeEmail, onSelectEmail, onAction, onReply, onShowStats, onReconnect]);
 
   const filtered = useMemo(() => items.filter((item) => matches(item, query)).slice(0, MAX_RESULTS), [items, query]);
 
@@ -135,7 +232,11 @@ export function CommandPalette({
       runItem(filtered[activeIdx]);
     } else if (e.key === 'Escape') {
       e.preventDefault();
+      const prev = prevFocusRef.current;
       onClose();
+      window.setTimeout(() => {
+        if (prev && typeof prev.focus === 'function' && document.contains(prev)) prev.focus();
+      }, 0);
     }
   };
 

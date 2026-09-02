@@ -24,9 +24,13 @@
   --status-info: #CBB7FB;
   --scrim: rgb(6 6 9 / 0.6);
 
-  /* Derived tints — extended per §2 rule ("extend the table first"):
-     alpha mixes of existing palette tokens, no new hues. */
-  --tint-accent: color-mix(in srgb, var(--accent-primary) 14%, transparent);
+  /* Lavender ramp — perceptual §2: wash 14%, chip 35%, selected 22% */
+  /* OKLCH reasoning: accent-primary #CBB7FB ~ L0.82 C0.08 h290; wash keeps chroma, selected deepens via #9B85E0 */
+  --lavender-1: color-mix(in srgb, var(--accent-primary) 14%, transparent);
+  --lavender-2: color-mix(in srgb, var(--accent-link) 35%, transparent);
+  --lavender-3: color-mix(in srgb, #9B85E0 22%, var(--surface-secondary));
+  --lavender-border: color-mix(in srgb, var(--border-default) 80%, var(--lavender-2) 20%);
+  --tint-accent: var(--lavender-1); /* alias for compat — was color-mix(accent-primary 14%, transparent) */
   --tint-warning: color-mix(in srgb, var(--status-warning) 14%, transparent);
   --tint-error: color-mix(in srgb, var(--status-error) 14%, transparent);
 
@@ -66,9 +70,11 @@
   --ease-in-out: ease-in-out;
   --ease-emphasis: cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* --- Depth (§7): exactly one shadow level — modal only --- */
+  /* --- Depth (§7): tinted depth — surface + tinted border + tinted shadow + optional grain --- */
   --shadow-modal: 0 16px 48px rgb(0 0 0 / 0.5);
-
+  --shadow-tinted: 0 8px 32px color-mix(in srgb, var(--lavender-2) 18%, transparent);
+  --shadow-toast: 0 8px 24px rgb(14 14 17 / 0.4);
+  --texture-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
   /* --- Layout (§4) --- */
   --rail-width: 220px;
   --rail-width-collapsed: 64px;
@@ -91,4 +97,6 @@
   --accent-link: #5D43AE;
   --scrim: rgb(6 6 9 / 0.45);
   --shadow-modal: 0 16px 48px rgb(0 0 0 / 0.18);
+  --shadow-tinted: 0 8px 32px color-mix(in srgb, var(--lavender-2) 12%, transparent);
+  --shadow-toast: 0 8px 24px rgb(14 14 17 / 0.25);
 }

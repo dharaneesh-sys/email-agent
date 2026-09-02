@@ -5,6 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Email Agent — smart inbox with AI-powered prioritization" />
     <meta name="theme-color" content="#0E0E11" />
+    <!-- Perf: preload critical variable fonts (Geist latin subset, see DESIGN.md §3). Hash matches vite build in web/dist/assets; re-sync after vite build if hash rotates. -->
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
+      href="/assets/geist-latin-wght-normal-BgDaEnEv.woff2"
+      fetchpriority="high"
+    />
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
+      href="/assets/geist-mono-latin-wght-normal-XN7g48iV.woff2"
+    />
     <script>
       (function () {
         try {

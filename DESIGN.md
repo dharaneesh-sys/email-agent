@@ -32,7 +32,11 @@ A quiet command center for the inbox — dense enough for power use, calm enough
 | Accent/primary | --accent-primary | #CBB7FB | Interactive glow, chips, focus, selected |
 | Accent/hover | --accent-hover | #DCCCFD | Hover state on accent elements |
 | Accent/link | --accent-link | #B79FF6 | Text links, AI badges (≥4.5:1 on surfaces) |
-| Accent/muted | --accent-muted | rgb(203 183 251 / 0.14) | Selected row wash, subtle fills |
+| Accent/muted | --accent-muted | rgb(203 183 251 / 0.14) | Selected row wash, subtle fills (alias → --lavender-1) |
+| Lavender wash | --lavender-1 | color-mix(in srgb, #CBB7FB 14%, transparent) | Wash 14% — selected-row & focus-ring fill (OKLCH: L 0.82 C 0.08 h 290) |
+| Lavender chip | --lavender-2 | color-mix(in srgb, #B79FF6 35%, transparent) | Chip / border tint ~35% — tag & score-chip borders |
+| Lavender selected | --lavender-3 | color-mix(in srgb, #9B85E0 22%, var(--surface-secondary)) | Selected-active wash 22% on surface-secondary (OKLCH denser, L≈0.62) |
+| Lavender border | --lavender-border | color-mix(in srgb, var(--border-default) 80%, var(--lavender-2) 20%) | 1px inner border mix for depth chrome (tinted border recipe) |
 | Status/success | --status-success | #8CE0AE | Confirmations, read-toggle |
 | Status/warning | --status-warning | #F5C77E | Warnings |
 | Status/error | --status-error | #F0807E | Errors, destructive |
@@ -70,7 +74,10 @@ A quiet command center for the inbox — dense enough for power use, calm enough
 - Body text never below 14px; captions never below 11px.
 - Headings wrap with `text-wrap: balance`; paragraphs `text-wrap: pretty`.
 - Numbers in mono where precision matters (scores, stats), proportional elsewhere.
-
+- `detail-subject` is 22px / 1.375rem at 600 weight, -0.02em tracking, with `text-wrap: balance` — overrides the 20px H1 token locally for authority.
+- `row-sender` tightened to -0.01em tracking for density.
+- Any truncated row text (`row-sender`, `row-subject`, `row-snippet`) carries a `title` attribute with the full text so hover reveals the untruncated value (power skim) — `overflow: hidden; text-overflow: ellipsis; white-space: nowrap` preserved.
+- Stat pills and numeric chips remain `tabular-nums` (mono, `var(--font-mono)`) to prevent layout shift when digits change.
 ## 4. Spacing & Layout
 
 ### Base Unit
@@ -196,13 +203,19 @@ All spacing derives from a base of **4px**.
 
 ## 7. Depth & Surface
 
-### Strategy: **mixed — tonal-shift + borders, one shadow layer**
+### Strategy: **mixed — tonal-shift + borders, one shadow layer, tinted depth (perceptual lavender ramp)**
+
+#### Depth recipe (multi-layer) — use for cards / selected rows / detail pane
+- **Base surface** + **1px inner border** `color-mix(in srgb, var(--border-default) 80%, var(--lavender-2) 20%)` (→ --lavender-border) — tints the chrome without introducing a new hue.
+- **Tinted shadow** `0 8px 32px color-mix(in srgb, var(--lavender-2) 18%, transparent)` layered under the existing modal shadow; subtle lavender halo on dark (barely visible on light).
+- **Optional grain** `radial-gradient` noise at 0.015 opacity — add only on elevated panels where texture helps separation (modal, detail header); omit on dense list rows.
+- Full stack: `background: var(--surface-secondary); border: 1px solid var(--lavender-border); box-shadow: var(--shadow-tinted), var(--shadow-modal)` for modals; `border: 1px solid var(--lavender-border); box-shadow: var(--shadow-tinted)` for selected cards.
 
 - Surface hierarchy by tonal shift: primary → secondary → elevated (no borders needed for panes; borders only where two same-tone surfaces meet).
-- Borders (1px var(--border-default)): rows, cards, inputs, modal chrome. Subtle (var(--border-subtle)): dividers inside panes.
-- Shadows: **exactly one level** — Prominent `0 16px 48px rgb(0 0 0 / 0.5)` for the modal layer only. Everything else is border + tone.
-- Accent glow: `box-shadow: 0 0 0 1px var(--accent-primary)` on selected/focused rows — outline, not ambient glow.
-- Zero glassmorphism, zero gradients, zero noise overlays. Restraint is the texture.
+- Borders (1px var(--border-default) or --lavender-border when tinted): rows, cards, inputs, modal chrome. Subtle (var(--border-subtle)): dividers inside panes.
+- Shadows: **two levels** — **tinted** `0 8px 32px` lavender wash for elevated cards/selected rows, **prominent** `0 16px 48px rgb(0 0 0 / 0.5)` for the modal layer only, **toast** `0 8px 24px rgb(14 14 17 / 0.4)` charcoal-tinted (--shadow-toast) for warm depth without pure-black glare. Everything else is border + tone.
+- Accent glow: `box-shadow: 0 0 0 1px var(--accent-primary)` on selected/focused rows — outline, not ambient glow (now backed by --lavender-3 wash).
+- Zero glassmorphism, zero gradients, zero noise overlays except 2% grain on empty state only — grain via `--texture-grain` SVG noise applied solely to `.list-state` empty surface through `::before` at opacity 0.02 with `pointer-events: none`; never global, no glare. Restraint is the texture. Toast shadow is charcoal-tinted (rgb(14 14 17 / .4)) and shells (EmailList + DetailPane) carry tinted depth via `var(--lavender-border)` + `var(--shadow-tinted)` behind the dark token.
 
 ## 8. Accessibility Constraints & Accepted Debt
 

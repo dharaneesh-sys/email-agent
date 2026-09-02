@@ -49,8 +49,56 @@ export function ComposeModal({ open, accountId, onClose, onSend }: ComposeModalP
   const toRef = useRef<HTMLInputElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const mountedRef = useRef(true);
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
 
   useEffect(() => () => { mountedRef.current = false; }, []);
+
+  // mailto quick fill: parse ?to=&subject=&body=&cc=&bcc= or ?mailto=mailto:... on open
+  useEffect(() => {
+    if (!open) return;
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      let patch: Partial<DraftShape> = {};
+      const mailtoRaw = sp.get('mailto');
+      if (mailtoRaw) {
+        try {
+          const url = new URL(mailtoRaw);
+          if (url.protocol === 'mailto:') {
+            if (url.pathname) patch.to = decodeURIComponent(url.pathname);
+            const s = url.searchParams.get('subject'); if (s) patch.subject = s;
+            const b = url.searchParams.get('body'); if (b) patch.body = b;
+            const cc = url.searchParams.get('cc'); if (cc) patch.cc = cc;
+            const bcc = url.searchParams.get('bcc'); if (bcc) patch.bcc = bcc;
+            const toParam = url.searchParams.get('to'); if (toParam && !patch.to) patch.to = toParam;
+          }
+        } catch {
+          // ignore malformed mailto
+        }
+      } else {
+        const to = sp.get('to'); if (to) patch.to = to;
+        const cc = sp.get('cc'); if (cc) patch.cc = cc;
+        const bcc = sp.get('bcc'); if (bcc) patch.bcc = bcc;
+        const subject = sp.get('subject'); if (subject) patch.subject = subject;
+        const body = sp.get('body'); if (body) patch.body = body;
+        const href = window.location.href;
+        if (!patch.to && href.includes('mailto:')) {
+          try {
+            const idx = href.indexOf('mailto:');
+            const url = new URL(href.slice(idx));
+            if (url.pathname) patch.to = patch.to || decodeURIComponent(url.pathname);
+            const s2 = url.searchParams.get('subject'); if (s2 && !patch.subject) patch.subject = s2;
+            const b2 = url.searchParams.get('body'); if (b2 && !patch.body) patch.body = b2;
+          } catch {
+            // ignore
+          }
+        }
+      }
+      if (Object.keys(patch).length) setDraft((d) => ({ ...d, ...patch }));
+    } catch {
+      // ignore
+    }
+  }, [open]);
 
   // Autosave every change, debounced 2s.
   useEffect(() => {
@@ -106,6 +154,21 @@ export function ComposeModal({ open, accountId, onClose, onSend }: ComposeModalP
   };
 
   const trapTab = (e: RKeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(draftRef.current));
+        setSavedAt(Date.now());
+      } catch {
+        // storage unavailable
+      }
+      const d = draftRef.current;
+      const hasContent = d.body.trim().length > 0 || d.to.trim().length > 0 || d.subject.trim().length > 0;
+      if (hasContent) window.dispatchEvent(new CustomEvent('email-agent:draft-saved'));
+      onClose();
+      return;
+    }
     if (e.key !== 'Tab') return;
     const el = dialogRef.current;
     if (!el) return;

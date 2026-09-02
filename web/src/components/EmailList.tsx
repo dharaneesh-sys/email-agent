@@ -122,6 +122,13 @@ export const EmailList = memo(function EmailList({
     content = (
       <div className="skeleton-list">
         {[0, 1, 2, 3, 4].map((i) => (
+          <SkeletonRow key={i} delayMs={i * 30} variant={i % 3 as 0 | 1 | 2} />
+        ))}
+      </div>
+    );
+    content = (
+      <div className="skeleton-list">
+        {[0, 1, 2, 3, 4].map((i) => (
           <SkeletonRow key={i} delayMs={i * 30} />
         ))}
       </div>

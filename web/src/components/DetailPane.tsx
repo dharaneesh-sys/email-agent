@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { EmailAttachment, EmailListItem, SnoozeDuration, Tone } from '../types';
 import type { SummaryResponse, ThreadMessage } from '../types';
 import { api, attachmentUrl } from '../api';
+import { mark } from '../utils/perf';
 import { formatDate, formatFileSize, linkifyText, resolveDetailBody, sanitizeEmailHtml } from '../utils';
 import { Button, IconButton } from './Button';
 import { ScoreChip } from './ScoreChip';
@@ -155,8 +156,13 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack, onRepl
         if (!sum) {
           // Try the SSE stream first — first token lands in ~hundreds of ms.
           // Any failure falls back to the buffered endpoint.
+          let firstToken = true;
           const streamed = await consumeSummaryStream(id, account, (delta) => {
             if (cancelled) return;
+            if (firstToken) {
+              mark('summary:first-token');
+              firstToken = false;
+            }
             setSummary((prev) => {
               const baseText = prev && prev.emailId === id && prev.status === 'streaming' ? prev.text : '';
               return { emailId: id, status: 'streaming', text: baseText + delta };

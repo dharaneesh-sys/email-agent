@@ -53,6 +53,27 @@ export const EmailItem = memo(function EmailItem({
 }: EmailItemProps) {
   const [snoozeOpen, setSnoozeOpen] = useState(false);
   const snoozeRef = useRef<HTMLDivElement | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const handleMouseMove = (e: MouseEvent<HTMLElement>) => {
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const target = e.currentTarget;
+    const { clientX, clientY } = e;
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      const rect = target.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      target.style.setProperty('--mouse-x', `${x}px`);
+      target.style.setProperty('--mouse-y', `${y}px`);
+      rafRef.current = null;
+    });
+  };
+  const handleMouseLeave = () => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+  };
   useEffect(() => {
     if (!snoozeOpen) return;
     const onDoc = (e: globalThis.MouseEvent) => {
@@ -100,6 +121,8 @@ export const EmailItem = memo(function EmailItem({
       aria-selected={selected}
       tabIndex={rovingTabIndex !== undefined ? rovingTabIndex : selected ? 0 : -1}
       onClick={open}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           const t = e.target as HTMLElement;
@@ -144,13 +167,19 @@ export const EmailItem = memo(function EmailItem({
 
       <div className="row-content">
         <div className="row-topline">
-          <span className="row-sender">{email.from}</span>
+          <span className="row-sender" title={email.from}>
+            {email.from}
+          </span>
           <time className="row-date" dateTime={email.date} title={new Date(email.date).toLocaleString()}>
             {formatDate(new Date(email.date))}
           </time>
         </div>
-        <div className="row-subject">{email.subject}</div>
-        <div className="row-snippet">{email.snippet}</div>
+        <div className="row-subject" title={email.subject}>
+          {email.subject}
+        </div>
+        <div className="row-snippet" title={email.snippet}>
+          {email.snippet}
+        </div>
         <div className="row-tags">
           {email.isImportant && (
             <span className="tag tag-important">
@@ -256,7 +285,7 @@ export const EmailItem = memo(function EmailItem({
             <ClockIcon size={16} />
           </IconButton>
           {snoozeOpen && (
-            <div role="menu" className="snooze-menu" style={{ position: 'absolute', right: 0, top: '100%', zIndex: 10, background: 'var(--surface, #1e1e1e)', border: '1px solid var(--border, #333)', borderRadius: 8, padding: 4, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
+            <div role="menu" className="snooze-menu" style={{ position: 'absolute', right: 0, top: '100%', zIndex: 10, background: 'var(--surface-elevated)', border: '1px solid var(--border-default)', borderRadius: 8, padding: 4, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
               {(['3h', 'tomorrow', 'nextWeek'] as const).map((d) => (
                 <button
                   key={d}

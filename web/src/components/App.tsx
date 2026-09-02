@@ -366,6 +366,29 @@ setSearchQuery('');
     }
   }, [accounts]);
 
+  const handleShowStats = useCallback(() => {
+    notify(`Unread ${stats.unread ?? '–'} · Important ${stats.important ?? '–'} · Total ${stats.total ?? '–'}`, 'info');
+  }, [notify, stats]);
+
+  const handleReconnect = useCallback(() => {
+    const id = currentAccountIdRef.current ?? accounts.find((a) => a.authenticated)?.id ?? accounts[0]?.id ?? 'primary';
+    void connect(id);
+  }, [accounts, connect]);
+
+  // Fallback listener when CommandPalette handles Show stats internally via CustomEvent
+  useEffect(() => {
+    const onShowStatsEvent = () => handleShowStats();
+    window.addEventListener('email-agent:show-stats', onShowStatsEvent as EventListener);
+    return () => window.removeEventListener('email-agent:show-stats', onShowStatsEvent as EventListener);
+  }, [handleShowStats]);
+
+  // Listen for ComposeModal Escape draft saved
+  useEffect(() => {
+    const onDraftSaved = () => notify('Draft saved', 'info');
+    window.addEventListener('email-agent:draft-saved', onDraftSaved as EventListener);
+    return () => window.removeEventListener('email-agent:draft-saved', onDraftSaved as EventListener);
+  }, [notify]);
+
   const applyLocalAction = useCallback((email: EmailListItem, action: EmailAction): EmailListItem => {
     switch (action) {
       case 'read':
@@ -847,7 +870,7 @@ setSearchQuery('');
           onDisconnect={disconnect}
         />
         <div className="app-content">
-          <div className="toolbar">
+          <div className="toolbar" role="toolbar" aria-label="Email actions">
             <SearchField value={searchQuery} onChange={setSearchQuery} inputRef={searchRef} />
             <div className="stat-pills" aria-label="Mailbox statistics">
               <span className="stat-pill" aria-label={`Unread emails ${stats.unread ?? 'unknown'}`}>
@@ -972,6 +995,8 @@ setSearchQuery('');
           setPaletteOpen(false);
           openReply(email);
         }}
+        onShowStats={handleShowStats}
+        onReconnect={handleReconnect}
       />
       <ComposeModal
         open={composeOpen}
