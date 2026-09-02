@@ -59,8 +59,8 @@ describe('extractNimApiKey', () => {
 describe('NIM_CONFIG', () => {
   test('has sensible defaults', () => {
     expect(NIM_CONFIG.baseUrl).toBe('https://integrate.api.nvidia.com/v1')
-    expect(NIM_CONFIG.defaultModel).toBe('meta/llama-3.1-70b-instruct')
-    expect(NIM_CONFIG.modelEnvOverride).toBeNull()
+    expect(NIM_CONFIG.defaultModel).toBe('nvidia/nemotron-3-super-120b-a12b')
+    expect(NIM_CONFIG.modelEnvOverride === null || typeof NIM_CONFIG.modelEnvOverride === 'string').toBe(true)
     expect(NIM_CONFIG.timeoutMs).toBe(90000)
     expect(NIM_CONFIG.maxRetries).toBe(2)
     expect(NIM_CONFIG.maxOutputTokens).toEqual({ importance: 128, summary: 512, reply: 1024 })

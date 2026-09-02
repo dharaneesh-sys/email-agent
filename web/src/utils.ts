@@ -189,10 +189,7 @@ export function removeSearchOperator(query: string, target: SearchOperator): str
  * extra endpoint.
  */
 export const NIM_MODEL_CANDIDATES: readonly string[] = [
-  'meta/llama-3.1-8b-instruct',
-  'meta/llama-3.1-70b-instruct',
-  'meta/llama-3.2-3b-instruct',
-  'nvidia/llama-3.3-nemotron-super-49b-v1',
-  'nvidia/nemotron-3-nano-30b-a3b',
-  'nvidia/nemotron-mini-4b-instruct',
+  'nvidia/nemotron-3-super-120b-a12b',
+  'meta/llama-3.2-11b-vision-instruct',
+  'nvidia/nemotron-3.5-lightning-30b-a3b',
 ];

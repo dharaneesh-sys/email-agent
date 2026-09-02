@@ -1503,21 +1503,29 @@
 }
 
 .full-email-body table {
-  border-collapse: collapse;
   inline-size: 100%;
+  max-inline-size: 100%;
   margin-block: var(--space-3);
+  border-collapse: collapse;
 }
 
 .full-email-body td,
 .full-email-body th {
-  border: 1px solid var(--border-default);
-  padding: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   font-size: var(--text-body-sm);
+  border: none;
+  vertical-align: top;
+}
+.full-email-body table[data-has-border] td,
+.full-email-body table[data-has-border] th,
+.full-email-body table[border] td,
+.full-email-body table[border] th {
+  border: 1px solid var(--border-subtle);
 }
 
 .full-email-body pre {
   background: var(--surface-secondary);
-  border: 1px solid var(--border-default);
+  border: none;
   border-radius: var(--radius-sm);
   padding: var(--space-3);
   overflow-x: auto;

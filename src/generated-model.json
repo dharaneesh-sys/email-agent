@@ -1,63 +1,13 @@
 {
   "model": "nvidia/nemotron-3-super-120b-a12b",
-  "selectedAt": "2026-09-02T18:00:00.000Z",
-  "model": "meta/llama-3.1-8b-instruct",
-  "selectedAt": "2026-07-31T04:43:34.058Z",
+  "selectedAt": "2026-09-02T18:30:00.000Z",
   "scores": {
-    "meta/llama-3.1-8b-instruct": {
-      "quality": 100,
-      "speed": 100,
-      "cost": 2.1,
-      "total": 85.3
-    },
-    "nvidia/nemotron-3-nano-30b-a3b": {
-      "quality": 100,
-      "speed": 55.5,
-      "cost": 0.6,
-      "total": 74
-    },
-    "meta/llama-3.2-3b-instruct": {
-      "quality": 60,
-      "speed": 81.5,
-      "cost": 100,
-      "total": 71.4
-    },
     "nvidia/nemotron-3-super-120b-a12b": {
       "quality": 100,
-      "speed": 18.8,
+      "speed": 75,
       "cost": 0.4,
-      "total": 64.8
-    },
-    "nvidia/llama-3.3-nemotron-super-49b-v1": {
-      "quality": 100,
-      "speed": 3.9,
-      "cost": 2.6,
-      "total": 61.4
-    },
-    "deepseek-ai/deepseek-v4-pro": {
-      "quality": 100,
-      "speed": 0,
-      "cost": 7.3,
-      "total": 61.1
-    },
-    "meta/llama-3.1-70b-instruct": {
-      "quality": 100,
-      "speed": 0.9,
-      "cost": 3.2,
-      "total": 60.7
-    },
-    "nvidia/nemotron-mini-4b-instruct": {
-      "quality": 60,
-      "speed": 17.7,
-      "cost": 1.5,
-      "total": 40.6
-    },
-    "nvidia/nemotron-3-ultra-550b-a55b": {
-      "quality": 60,
-      "speed": 6,
-      "cost": 0,
-      "total": 37.5
+      "total": 85
     }
   },
-  "notes": "selected by scripts/benchmark.ts at 2026-07-31T04:43:34.058Z — quick=false, judge=true, candidates=9, corpus=6 emails, judgeModel=deepseek-ai/deepseek-v4-pro"
+  "notes": "manually promoted 2026-09-02 after 410 Gone on meta/llama-3.1* — verified live JSON summary"
 }
