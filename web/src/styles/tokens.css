@@ -14,25 +14,37 @@
   --text-tertiary: #87848a;
   --border-default: #26262E;
   --border-subtle: #1B1B21;
-  --accent-primary: #CBB7FB;
-  --accent-hover: #DCCCFD;
-  --accent-link: #B79FF6;
-  --accent-muted: rgb(203 183 251 / 0.14);
+  --accent-primary: #F59E0B;
+  --accent-hover: #FBBF24;
+  --accent-link: #D97706;
+  --accent-muted: rgb(245 158 11 / 0.14);
   --status-success: #8CE0AE;
   --status-warning: #F5C77E;
   --status-error: #F0807E;
-  --status-info: #CBB7FB;
+  --status-info: #F59E0B;
   --scrim: rgb(6 6 9 / 0.6);
+  /* Email isolation — light card for HTML emails (not surfaces) */
+  --email-card-bg: #ffffff;
+  --email-card-text: #2a2b33;
+  --email-card-border: #ececec;
+  --email-card-link: #4f46e5;
+  --email-card-quote-border: #e5e7eb;
+  --email-card-quote-text: #4b5563;
 
-  /* Lavender ramp — perceptual §2: wash 14%, chip 35%, selected 22% */
-  /* OKLCH reasoning: accent-primary #CBB7FB ~ L0.82 C0.08 h290; wash keeps chroma, selected deepens via #9B85E0 */
-  --lavender-1: color-mix(in srgb, var(--accent-primary) 14%, transparent);
-  --lavender-2: color-mix(in srgb, var(--accent-link) 35%, transparent);
-  --lavender-3: color-mix(in srgb, #9B85E0 22%, var(--surface-secondary));
-  --lavender-border: color-mix(in srgb, var(--border-default) 80%, var(--lavender-2) 20%);
-  --tint-accent: var(--lavender-1); /* alias for compat — was color-mix(accent-primary 14%, transparent) */
+  /* Amber ramp — perceptual §2: wash 14%, chip 35%, selected 22% */
+  /* OKLCH reasoning: accent-primary #F59E0B ~ L0.82 C0.13 h75; wash keeps chroma, selected deepens via #92400E */
+  --amber-1: color-mix(in srgb, var(--accent-primary) 14%, transparent);
+  --amber-2: color-mix(in srgb, var(--accent-link) 35%, transparent);
+  --amber-3: color-mix(in srgb, #92400E 22%, var(--surface-secondary));
+  --amber-border: color-mix(in srgb, var(--border-default) 80%, var(--amber-2) 20%);
+  --tint-accent: var(--amber-1);
   --tint-warning: color-mix(in srgb, var(--status-warning) 14%, transparent);
   --tint-error: color-mix(in srgb, var(--status-error) 14%, transparent);
+  /* Deprecated lavender aliases — single amber lock */
+  --lavender-1: var(--amber-1);
+  --lavender-2: var(--amber-2);
+  --lavender-3: var(--amber-3);
+  --lavender-border: var(--amber-border);
 
   /* --- Typography (§3) --- */
   --font-sans: 'Geist Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -72,7 +84,7 @@
 
   /* --- Depth (§7): tinted depth — surface + tinted border + tinted shadow + optional grain --- */
   --shadow-modal: 0 16px 48px rgb(0 0 0 / 0.5);
-  --shadow-tinted: 0 8px 32px color-mix(in srgb, var(--lavender-2) 18%, transparent);
+  --shadow-tinted: 0 8px 32px color-mix(in srgb, var(--amber-2) 18%, transparent);
   --shadow-toast: 0 8px 24px rgb(14 14 17 / 0.4);
   --texture-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
   /* --- Layout (§4) --- */
@@ -80,8 +92,10 @@
   --rail-width-collapsed: 64px;
 }
 
-/* Light theme — inverted surfaces, same-hue lavender darkened to keep
-   accent-on-surface >= 4.5:1 (hue preserved, luminance inverted). */
+/* Light theme — inverted surfaces, warm amber darkened to keep
+   accent-on-surface >= 4.5:1 (hue preserved, luminance tuned).
+   WCAG: #92400E 6.92:1 on #FCFCFD, 6.35:1 on #F2F2F5 — chosen over #A16207 family
+   which fails on secondary (4.41:1). Hover #9C5700 4.98:1 on secondary; link #78350F 8.85:1. */
 :root[data-theme="light"] {
   --surface-primary: #FCFCFD;
   --surface-secondary: #F2F2F5;
@@ -92,11 +106,12 @@
   --text-tertiary: #6B6A72;
   --border-default: #E2E2E8;
   --border-subtle: #ECECF0;
-  --accent-primary: #6B4FBB;
-  --accent-hover: #7C5FCE;
-  --accent-link: #5D43AE;
+  --accent-primary: #92400E;
+  --accent-hover: #9C5700;
+  --accent-link: #78350F;
   --scrim: rgb(6 6 9 / 0.45);
   --shadow-modal: 0 16px 48px rgb(0 0 0 / 0.18);
-  --shadow-tinted: 0 8px 32px color-mix(in srgb, var(--lavender-2) 12%, transparent);
+  --shadow-tinted: 0 8px 32px color-mix(in srgb, var(--amber-2) 12%, transparent);
   --shadow-toast: 0 8px 24px rgb(14 14 17 / 0.25);
+  --amber-3: color-mix(in srgb, #78350F 18%, var(--surface-secondary));
 }

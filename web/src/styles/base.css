@@ -17,6 +17,10 @@ html {
   color-scheme: dark;
 }
 
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
 body {
   font-family: var(--font-sans);
   font-size: var(--text-body);
@@ -89,8 +93,16 @@ button {
   border: 0;
 }
 
-/* Motion kill-switch (§6) — stagger collapsed, duration ~0 */
+/* Motion kill-switch (§6) — stagger collapsed, duration ~0
+   Motion (framer-motion) respects this via reducedMotion="user" wired in main.tsx */
 @media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-micro: 0.01ms;
+    --duration-standard: 0.01ms;
+    --duration-emphasis: 0.01ms;
+    --duration-ambient: 0.01ms;
+  }
+
   *,
   *::before,
   *::after {

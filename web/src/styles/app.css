@@ -53,16 +53,6 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
   }
 }
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.workspace[data-split] {
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.6fr);
-}
 
 /* ============ Toolbar ============ */
 
@@ -714,7 +704,7 @@
   padding: var(--space-2);
   scroll-behavior: smooth;
   background: var(--surface-secondary);
-  border-inline-end: 1px solid var(--lavender-border);
+  border-inline-end: 1px solid var(--amber-border);
   box-shadow: var(--shadow-tinted);
 }
 
@@ -757,16 +747,6 @@
   animation: row-in 200ms var(--ease-out) both;
   transition: background var(--duration-micro) ease-out, box-shadow var(--duration-micro) ease-out;
 }
-  position: relative;
-  display: flex;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  animation: row-in 200ms var(--ease-out) both;
-  transition: background var(--duration-micro) ease-out, box-shadow var(--duration-micro) ease-out;
-}
 
 .email-item:hover {
   background: var(--surface-elevated);
@@ -794,9 +774,6 @@
     will-change: transform, opacity;
   }
 }
-  background: var(--surface-elevated);
-  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent-primary) 35%, transparent);
-}
 
 .email-item:focus-visible {
   box-shadow: inset 0 0 0 2px var(--accent-primary);
@@ -808,8 +785,8 @@
 }
 
 .email-item.selected {
-  background: var(--lavender-3, var(--accent-muted));
-  border: 1px solid var(--lavender-border, var(--border-default));
+  background: var(--amber-3, var(--accent-muted));
+  border: 1px solid var(--amber-border, var(--border-default));
   box-shadow:
     inset 0 0 0 1px var(--accent-primary),
     inset 2px 0 0 var(--accent-primary),
@@ -817,7 +794,7 @@
 }
 
 .email-item.selected:hover {
-  background: color-mix(in srgb, var(--lavender-3, var(--accent-muted)) 80%, var(--surface-elevated));
+  background: color-mix(in srgb, var(--amber-3, var(--accent-muted)) 80%, var(--surface-elevated));
   box-shadow:
     inset 0 0 0 1px var(--accent-primary),
     inset 2px 0 0 var(--accent-primary),
@@ -1179,9 +1156,6 @@
   border-radius: var(--radius-sm);
   flex-shrink: 0;
 }
-  inline-size: 40%;
-  block-size: 10px;
-}
 
 .skeleton-line-md {
   inline-size: 70%;
@@ -1195,7 +1169,7 @@
   min-height: 0;
   overflow: hidden;
   background: var(--surface-primary);
-  border-inline-start: 1px solid var(--lavender-border);
+  border-inline-start: 1px solid var(--amber-border);
   box-shadow: var(--shadow-tinted);
 }
 
@@ -1286,15 +1260,8 @@
 
 .summary-panel {
   padding: var(--space-4);
-  background: color-mix(in srgb, var(--surface-elevated) 92%, var(--lavender-2) 8%);
-  border: 1px solid color-mix(in srgb, var(--border-default) 80%, var(--lavender-2) 20%);
-  border-inline-start: 2px solid var(--accent-primary);
-  border-radius: var(--radius-sm);
-  margin-block-end: var(--space-6);
-}
-  padding: var(--space-4);
-  background: var(--surface-secondary);
-  border: 1px solid var(--border-default);
+  background: color-mix(in srgb, var(--surface-elevated) 92%, var(--amber-2) 8%);
+  border: 1px solid color-mix(in srgb, var(--border-default) 80%, var(--amber-2) 20%);
   border-inline-start: 2px solid var(--accent-primary);
   border-radius: var(--radius-sm);
   margin-block-end: var(--space-6);
@@ -1481,25 +1448,21 @@
 /* HTML emails: isolate in a light card so white-bg designs (e.g. Brave) stay readable in dark theme. */
 .full-email-body:not(.is-text) {
   max-inline-size: none;
-  background: #ffffff;
-  color: #2a2b33;
-  border: 1px solid #ececec;
+  background: var(--email-card-bg);
+  color: var(--email-card-text);
+  border: 1px solid var(--email-card-border);
   border-radius: var(--radius-sm);
   padding: var(--space-4);
   overflow-x: auto;
 }
 
 .full-email-body:not(.is-text) a {
-  color: #4f46e5;
+  color: var(--email-card-link);
 }
 
 .full-email-body:not(.is-text) blockquote {
-  border-inline-start-color: #e5e7eb;
-  color: #4b5563;
-}
-  font-size: var(--text-body-sm);
-  font-style: italic;
-  color: var(--text-tertiary);
+  border-inline-start-color: var(--email-card-quote-border);
+  color: var(--email-card-quote-text);
 }
 
 /* ============ Attachments ============ */
@@ -2580,7 +2543,7 @@
 .thread-list::before { content: ''; position: absolute; inset-inline-start: 6px; inset-block-start: 12px; inset-block-end: 12px; inline-size: 1px; background: var(--border-subtle); }
 .thread-msg { border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); overflow: hidden; background: var(--surface-secondary); opacity: 0.92; position: relative; margin-block-start: -8px; transition: background var(--duration-micro) ease-out, border-color var(--duration-micro) ease-out, box-shadow var(--duration-micro) ease-out, opacity var(--duration-micro) ease-out; }
 .thread-msg:first-child { margin-block-start: 0; }
-.thread-msg.is-open { background: var(--surface-elevated); border-color: var(--lavender-2); opacity: 1; box-shadow: var(--shadow-tinted); z-index: 1; }
+.thread-msg.is-open { background: var(--surface-elevated); border-color: var(--amber-2); opacity: 1; box-shadow: var(--shadow-tinted); z-index: 1; }
 .thread-msg-header { width: 100%; display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); background: var(--surface-secondary); border: 0; cursor: pointer; text-align: left; }
 .thread-msg.is-open .thread-msg-header { background: var(--surface-elevated); }
 .thread-msg-from { font-weight: 600; font-size: var(--text-body-sm); color: var(--text-primary); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
