@@ -15,7 +15,7 @@ const SettingsPane = lazy(() => import('./SettingsPane').then((m) => ({ default:
 import { ErrorBoundary } from './ErrorBoundary';
 import { Toast, type ToastState } from './Toast';
 import { Button, IconButton } from './Button';
-import { RefreshIcon, SparklesIcon } from '../icons';
+import { InfoIcon, RefreshIcon, SparklesIcon } from '../icons';
 
 mark('app:init');
 
@@ -46,6 +46,7 @@ export function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
   const [bulkSelectedIds, setBulkSelectedIds] = useState<ReadonlySet<string>>(new Set());
   const [labelList, setLabelList] = useState<LabelInfo[]>([]);
   const [bulkLabel, setBulkLabel] = useState('');
@@ -57,6 +58,22 @@ export function App() {
   const toastTimer = useRef<number | null>(null);
   const toastId = useRef(0);
   const searchRef = useRef<HTMLInputElement | null>(null);
+  const statsWrapRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!statsOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (statsWrapRef.current && !statsWrapRef.current.contains(e.target as Node)) setStatsOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setStatsOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [statsOpen]);
   const listRef = useRef<HTMLElement | null>(null);
   const searchQueryRef = useRef('');
   const [serverQuery, setServerQuery] = useState('');
@@ -886,6 +903,35 @@ setSearchQuery('');
                 <span className="stat-value" aria-hidden="true">{stats.total ?? '–'}</span>
               </span>
             </div>
+            <div className="stat-pills-popover-wrap" ref={statsWrapRef as never}>
+              <button
+                type="button"
+                className="stat-pills-trigger icon-btn"
+                aria-label="Mailbox statistics"
+                aria-expanded={statsOpen}
+                aria-haspopup="dialog"
+                title="Mailbox statistics"
+                onClick={() => setStatsOpen((v) => !v)}
+              >
+                <InfoIcon size={18} />
+              </button>
+              {statsOpen && (
+                <div className="stat-popover" role="dialog" aria-label="Mailbox statistics">
+                  <div className="stat-popover-row">
+                    <span className="stat-label">Unread</span>
+                    <span className="stat-value">{stats.unread ?? '–'}</span>
+                  </div>
+                  <div className="stat-popover-row">
+                    <span className="stat-label">Important</span>
+                    <span className="stat-value">{stats.important ?? '–'}</span>
+                  </div>
+                  <div className="stat-popover-row">
+                    <span className="stat-label">Total</span>
+                    <span className="stat-value">{stats.total ?? '–'}</span>
+                  </div>
+                </div>
+              )}
+            </div>
             {modelName && (
               <span className="model-badge" aria-label={`Active model ${modelName}`} role="status">
                 <span className="model-dot" aria-hidden="true" />
@@ -895,9 +941,16 @@ setSearchQuery('');
             <IconButton label="Refresh" disabled={refreshing} onClick={() => void handleRefresh()}>
               <RefreshIcon size={18} className={refreshing ? 'is-spinning' : ''} />
             </IconButton>
-            <Button variant="primary" disabled={analyzing} onClick={() => void refreshImportance(false)}>
-              <SparklesIcon size={16} />
-              <span>{analyzing ? 'Analyzing…' : 'Analyze'}</span>
+            <Button
+              variant="primary"
+              className="analyze-btn"
+              disabled={analyzing}
+              onClick={() => void refreshImportance(false)}
+              aria-label="Analyze importance"
+              title={analyzing ? 'Analyzing…' : 'Analyze importance'}
+            >
+              <SparklesIcon size={16} aria-hidden="true" />
+              <span className="analyze-label">{analyzing ? 'Analyzing…' : 'Analyze'}</span>
             </Button>
           </div>
           {bulkSelectedIds.size > 0 && (
