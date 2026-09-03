@@ -9,7 +9,8 @@ interface ReplyModalProps {
   email: EmailListItem | null;
   prefill: string | null;
   onClose(): void;
-  onSend(body: string): Promise<boolean>;
+  /** replyAll honored — passed through to handler, contract unchanged (server threads via In-Reply-To; flag kept for future). */
+  onSend(body: string, replyAll: boolean): Promise<boolean>;
 }
 
 export function ReplyModal({ email, prefill, onClose, onSend }: ReplyModalProps) {
@@ -50,7 +51,7 @@ export function ReplyModal({ email, prefill, onClose, onSend }: ReplyModalProps)
     setSending(true);
     setError(null);
     try {
-      const ok = await onSend(text);
+      const ok = await onSend(text, replyAll);
       if (!mountedRef.current) return;
       if (!ok) bodyRef.current?.focus();
     } catch {
@@ -61,11 +62,17 @@ export function ReplyModal({ email, prefill, onClose, onSend }: ReplyModalProps)
   };
 
   const trapTab = (e: RKeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      onClose();
+      return;
+    }
     if (e.key !== 'Tab') return;
     const el = dialogRef.current;
     if (!el) return;
     const focusables = el.querySelectorAll<HTMLElement>(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      'button:not([disabled]), [href], input:not([disabled]), select, textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
     );
     const first = focusables[0] ?? null;
     const last = focusables[focusables.length - 1] ?? null;

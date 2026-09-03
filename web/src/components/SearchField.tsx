@@ -45,8 +45,8 @@ export function SearchField({ value, onChange, inputRef }: SearchFieldProps) {
       </div>
       {operators.length > 0 && (
         <div className="search-chips" role="list" aria-label="Active search operators">
-          {operators.map((op) => (
-            <span key={`${op.op}:${op.value}`} className="search-chip" role="listitem">
+          {operators.map((op, i) => (
+            <span key={`${op.op}:${op.value}-${i}`} className="search-chip" role="listitem">
               <span className="search-chip-op">{op.op}</span>
               {op.value && <span className="search-chip-value">{op.value}</span>}
               <button

@@ -1661,30 +1661,43 @@
   padding: var(--space-6);
 }
 
-/* ============ ReplyModal (§5) ============ */
-
+/* ============ Compose / Reply shared shell (§5) — unified chrome ============ */
+/* Backdrop: functional glass — backdrop-filter blur 12 saturate 150 with solid fallback */
 .modal-backdrop {
   position: fixed;
   inset: 0;
   z-index: 50;
   display: grid;
   place-items: center;
-  background: var(--scrim);
+  background: var(--scrim); /* fallback solid when backdrop-filter unsupported */
   animation: fade-in var(--duration-micro) ease-out both;
   padding: var(--space-4);
+}
+
+@supports (backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px)) {
+  .modal-backdrop {
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    backdrop-filter: blur(12px) saturate(150%);
+    background: color-mix(in srgb, var(--scrim) 88%, transparent);
+  }
+}
+
+/* Shared shell — both modals use elevated surface + amber-border + tinted shadow */
+.reply-modal,
+.compose-modal {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface-elevated);
+  border: 1px solid var(--amber-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal), var(--shadow-tinted);
+  animation: modal-in var(--duration-standard) var(--ease-out) both;
 }
 
 .reply-modal {
   inline-size: min(560px, 100%);
   max-block-size: min(720px, calc(100dvb - var(--space-12)));
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--surface-elevated);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-modal); /* the app's single shadow level */
-  animation: modal-in var(--duration-standard) var(--ease-out) both;
 }
 
 .modal-header {
@@ -2232,17 +2245,36 @@
   .summary-loading .skeleton,
   .is-spinning,
   .toast,
-  .reply-modal {
+  .reply-modal,
+  .palette-backdrop,
+  .command-palette {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
   .detail-sheet {
     will-change: auto !important;
     transition-duration: 0.01ms !important;
   }
+  .palette-backdrop {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
   html {
     scroll-behavior: auto;
   }
+}
+
+/* ============ Command palette — functional glass (§5 overlay) ============ */
+/* Glass only on palette: backdrop scrim + blur 8px + amber glow border reveal */
+
+.palette-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  background: var(--scrim);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 /* ============ Command palette (§5 overlay) ============ */
@@ -2252,14 +2284,17 @@
   inset-block-start: 15vh;
   inset-inline: 0;
   margin-inline: auto;
+  z-index: 50;
   inline-size: min(560px, calc(100vw - 32px));
   max-block-size: 60dvb;
   display: flex;
   flex-direction: column;
   background: var(--surface-elevated);
-  border: 1px solid var(--border-default);
+  border: 1px solid var(--amber-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-modal);
+  box-shadow:
+    0 0 0 1px var(--amber-border),
+    var(--shadow-modal);
   overflow: hidden;
 }
 
@@ -2341,11 +2376,56 @@
 
 .palette-footer {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-4);
   padding: var(--space-2) var(--space-4);
   border-block-start: 1px solid var(--border-subtle);
   color: var(--text-tertiary);
   font-size: var(--text-caption);
+}
+
+.palette-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-block-end: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-elevated) 92%, var(--amber-2) 8%);
+}
+
+.palette-back {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--duration-micro) ease-out, border-color var(--duration-micro) ease-out;
+}
+
+.palette-back:hover {
+  background: var(--surface-hover);
+  border-color: var(--amber-border);
+  color: var(--text-primary);
+}
+
+.palette-crumb {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.palette-option-chevron {
+  margin-inline-start: auto;
+  color: var(--text-tertiary);
+  font-size: var(--text-body);
 }
 
 /* ============ Search operators (1.3) ============ */
@@ -2652,6 +2732,7 @@
 
 .compose-modal {
   inline-size: min(640px, calc(100vw - 32px));
+  max-block-size: min(720px, calc(100dvb - var(--space-12)));
 }
 
 .compose-row {

@@ -625,8 +625,9 @@ setSearchQuery('');
   }, []);
 
   const sendReply = useCallback(
-    async (body: string): Promise<boolean> => {
+    async (body: string, replyAll = false): Promise<boolean> => {
       if (!replyEmail || !currentAccountId) return false;
+      void replyAll; // honored from checkbox; contract unchanged — server threads via In-Reply-To (kept vs removal)
       try {
         const data = await api.sendReply(replyEmail.id, body, currentAccountId);
         if (!data.success) throw new Error('Reply failed');
@@ -775,7 +776,7 @@ setSearchQuery('');
 
       if (e.key === 'Escape') {
         if (paletteOpen) {
-          setPaletteOpen(false);
+          // Let palette handle nested stack internally — do not force-close
           return;
         }
         if (composeOpen) {
@@ -807,9 +808,9 @@ setSearchQuery('');
       }
       if (isFormField) return;
 
-      if (e.key === '/') {
+      if (e.key === '/' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
-        searchRef.current?.focus();
+        setPaletteOpen(true);
         return;
       }
       if (e.key === 'r' && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
