@@ -80,8 +80,16 @@ button {
   transform: translateY(0);
 }
 
+/* kbd caps (§8) — mono, small-caps, amber-border-ready */
+kbd {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 /* Visually hidden but available to screen readers */
-.sr-only {
   position: absolute;
   inline-size: 1px;
   block-size: 1px;
@@ -104,12 +112,22 @@ button {
   }
 
   *,
+
   *::before,
+
   *::after {
+
     animation-duration: 0.01ms !important;
+
     animation-delay: 0ms !important;
+
     animation-iteration-count: 1 !important;
+
     transition-duration: 0.01ms !important;
+
+    will-change: auto !important;
+
     scroll-behavior: auto !important;
+
   }
 }

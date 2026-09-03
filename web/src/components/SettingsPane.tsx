@@ -1,3 +1,4 @@
+/* SettingsPane — amber lock: theme pills is-active var(--accent-muted)/var(--accent-primary), health is-ok tint-accent, focus trap + Esc */
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { Button, IconButton } from './Button';

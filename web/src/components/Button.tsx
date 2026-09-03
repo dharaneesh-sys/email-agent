@@ -1,3 +1,4 @@
+/* Button — primary amber var(--accent-primary) on var(--surface-primary) #92400E/#FCFCFD 6.92 AA, hover var(--accent-hover), IconButton 44×44 */
 import type { ButtonHTMLAttributes } from 'react';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost';

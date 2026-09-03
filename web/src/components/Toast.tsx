@@ -1,3 +1,4 @@
+/* Toast — fixed bottom center, amber info border 50% var(--accent-primary), charcoal+tinted shadow var(--shadow-toast), var(--shadow-tinted) */
 import type { ComponentType } from 'react';
 import type { ToastVariant } from '../types';
 import type { IconProps } from '../icons';

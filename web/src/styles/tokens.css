@@ -109,6 +109,7 @@
   --accent-primary: #92400E;
   --accent-hover: #9C5700;
   --accent-link: #78350F;
+  --status-info: #92400E;
   --scrim: rgb(6 6 9 / 0.45);
   --shadow-modal: 0 16px 48px rgb(0 0 0 / 0.18);
   --shadow-tinted: 0 8px 32px color-mix(in srgb, var(--amber-2) 12%, transparent);

@@ -324,6 +324,19 @@
   color: var(--text-tertiary);
   font-family: var(--font-mono);
   font-size: var(--text-overline);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+  position: absolute;
+  inset-inline-end: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--surface-hover);
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: var(--text-overline);
 }
 
 /* ============ NavRail (§5) ============ */
@@ -1810,17 +1823,17 @@
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   font-size: var(--text-body-sm);
-  box-shadow: var(--shadow-toast);
+  box-shadow: var(--shadow-toast), var(--shadow-tinted);
   animation: toast-in 200ms var(--ease-out) both;
   pointer-events: auto;
 }
 
 .toast-info {
-  border-color: color-mix(in srgb, var(--status-info) 50%, transparent);
+  border-color: color-mix(in srgb, var(--accent-primary) 50%, transparent);
 }
 
 .toast-info svg {
-  color: var(--status-info);
+  color: var(--accent-primary);
 }
 
 .toast-success {
@@ -1923,10 +1936,12 @@
 .btn-primary {
   background: var(--accent-primary);
   color: var(--surface-primary);
+  border-color: var(--accent-primary);
 }
 
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 
 .btn-secondary {
@@ -2240,17 +2255,47 @@
 /* ============ Reduced motion ============ */
 
 @media (prefers-reduced-motion: reduce) {
+
   .skeleton::after,
+
   .email-item,
+
+  .email-item.analyzing .row-content,
+
   .summary-loading .skeleton,
+
   .is-spinning,
+
   .toast,
+
   .reply-modal,
+
+  .compose-modal,
+
   .palette-backdrop,
-  .command-palette {
+
+  .command-palette,
+
+  .virtual-row,
+
+  .summary-text.is-streaming::after {
+
     animation-duration: 0.01ms !important;
+
     animation-iteration-count: 1 !important;
+
+    animation-delay: 0ms !important;
+
     transition-duration: 0.01ms !important;
+
+  }
+
+  .detail-sheet {
+
+    will-change: auto !important;
+
+    transition-duration: 0.01ms !important;
+
   }
   .detail-sheet {
     will-change: auto !important;
@@ -2766,24 +2811,29 @@
 .thread-msg-empty { color: var(--text-tertiary); font-size: var(--text-body-sm); }
 /* Attachment preview (2.5) */
 .attachment-preview-btn { margin-left: var(--space-2); font-size: var(--text-caption); padding: 2px 8px; border-radius: var(--radius-pill); border: 1px solid var(--border-default); background: var(--surface-elevated); color: var(--text-primary); cursor: pointer; }
-.attachment-lightbox-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 50; }
+.attachment-lightbox-backdrop { position: fixed; inset: 0; background: var(--scrim); display: flex; align-items: center; justify-content: center; z-index: 50; }
 .attachment-lightbox { position: relative; max-width: 90vw; max-height: 90vh; background: var(--surface-primary); border-radius: var(--radius-lg); overflow: hidden; }
 .attachment-lightbox-img { max-width: 90vw; max-height: 85vh; display: block; }
 .attachment-lightbox-pdf { width: 80vw; height: 85vh; border: 0; }
 .attachment-lightbox-close { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border-radius: 50%; border: 0; background: var(--surface-elevated); color: var(--text-primary); font-size: 20px; cursor: pointer; }
 /* Settings pane (3.6) */
-.settings-pane { inline-size: min(520px, calc(100vw - 32px)); max-block-size: 80dvb; display: flex; flex-direction: column; background: var(--surface-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-lg); box-shadow: var(--shadow-modal); overflow: hidden; }
+.settings-pane { inline-size: min(520px, calc(100vw - 32px)); max-block-size: 80dvb; display: flex; flex-direction: column; background: var(--surface-elevated); border: 1px solid var(--amber-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-modal), var(--shadow-tinted); overflow: hidden; }
 .settings-body { flex: 1; overflow-y: auto; padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-6); min-height: 0; }
 .settings-section h3 { margin: 0 0 var(--space-2); font-size: var(--text-overline); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
 .theme-toggle { display: inline-flex; border: 1px solid var(--border-default); border-radius: var(--radius-pill); overflow: hidden; }
 .theme-option { padding: var(--space-2) var(--space-4); min-block-size: 36px; border: none; background: transparent; color: var(--text-secondary); font-family: inherit; font-size: var(--text-body-sm); cursor: pointer; transition: background var(--duration-micro) ease-out, color var(--duration-micro) ease-out; }
 .theme-option + .theme-option { border-inline-start: 1px solid var(--border-default); }
-.theme-option.is-active { background: var(--accent-muted); color: var(--accent-primary); font-weight: 600; }
+.theme-option.is-active { background: var(--accent-muted); color: var(--accent-primary); font-weight: 600; border-color: var(--amber-border); }
 .shortcut-list { margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
 .shortcut-row { display: flex; align-items: center; gap: var(--space-3); }
 .shortcut-row dt { min-inline-size: 130px; }
 .shortcut-row dd { margin: 0; color: var(--text-secondary); font-size: var(--text-body-sm); }
-.shortcut-list kbd { font-family: var(--font-mono); font-size: var(--text-caption); padding: 2px 8px; border: 1px solid var(--border-default); border-radius: var(--radius-sm); background: var(--surface-secondary); color: var(--text-primary); }
+.shortcut-list kbd { font-family: var(--font-mono); font-size: var(--text-caption); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 8px; border: 1px solid var(--border-default); border-radius: var(--radius-sm); background: var(--surface-secondary); color: var(--text-primary); }
+/* Amber health badges — ok uses single amber lock, warn/error retain semantic tints */
+.health-badge { display: inline-flex; align-items: center; font-family: var(--font-mono); font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; border-radius: var(--radius-pill); }
+.health-badge.is-ok { background: var(--tint-accent); border-color: color-mix(in srgb, var(--accent-primary) 35%, transparent) !important; color: var(--accent-primary); }
+.health-badge.is-warn { background: var(--tint-warning); border-color: color-mix(in srgb, var(--status-warning) 35%, transparent) !important; color: var(--status-warning); }
+.health-badge.is-danger { background: var(--tint-error); border-color: color-mix(in srgb, var(--status-error) 35%, transparent) !important; color: var(--status-error); }
 /* Bulk label bar (3.5) */
 .bulk-bar { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-4); background: var(--accent-muted); border-block: 1px solid var(--border-subtle); }
 .bulk-count { font-size: var(--text-body-sm); font-weight: 600; color: var(--accent-primary); margin-inline-end: auto; }
