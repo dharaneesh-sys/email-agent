@@ -11,6 +11,8 @@ import type { EmailAction, EmailListItem, SnoozeDuration } from '../types';
 import { Button } from './Button';
 import { EmailItem } from './EmailItem';
 import { SkeletonRow } from './SkeletonRow';
+import { MagnifyingGlass, ArrowsClockwise } from '@phosphor-icons/react';
+
 
 interface EmailListProps {
   emails: EmailListItem[];
@@ -122,14 +124,7 @@ export const EmailList = memo(function EmailList({
     content = (
       <div className="skeleton-list">
         {[0, 1, 2, 3, 4].map((i) => (
-          <SkeletonRow key={i} delayMs={i * 30} variant={i % 3 as 0 | 1 | 2} />
-        ))}
-      </div>
-    );
-    content = (
-      <div className="skeleton-list">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <SkeletonRow key={i} delayMs={i * 30} />
+          <SkeletonRow key={i} delayMs={i * 30} variant={(i % 3) as 0 | 1 | 2} />
         ))}
       </div>
     );
@@ -140,6 +135,7 @@ export const EmailList = memo(function EmailList({
         <p className="list-state-title">Couldn't load emails</p>
         <p className="list-state-hint">The request failed. Check your connection and try again.</p>
         <Button variant="secondary" onClick={onRetry}>
+          <ArrowsClockwise size={16} aria-hidden="true" />
           Retry
         </Button>
       </div>
@@ -151,6 +147,7 @@ export const EmailList = memo(function EmailList({
         <p className="list-state-title">No results</p>
         <p className="list-state-hint">Nothing matches your search or filters.</p>
         <Button variant="secondary" onClick={onClearSearch}>
+          <MagnifyingGlass size={16} aria-hidden="true" />
           Clear search
         </Button>
       </div>

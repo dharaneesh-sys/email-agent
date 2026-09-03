@@ -1,3 +1,4 @@
+import { ArrowsClockwise } from '@phosphor-icons/react';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 interface ErrorBoundaryProps {
@@ -34,9 +35,11 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       return (
         this.props.fallback ?? (
           <div className="error-boundary" role="alert">
+            <span className="list-state-ring is-error" aria-hidden="true" />
             <p className="error-boundary-title">Something went wrong</p>
             <p className="error-boundary-hint">{this.state.error?.message ?? 'This section crashed.'}</p>
-            <button type="button" className="btn btn-secondary" onClick={this.handleReset}>
+            <button type="button" className="btn btn-primary" onClick={this.handleReset}>
+              <ArrowsClockwise size={16} aria-hidden="true" />
               Try again
             </button>
           </div>

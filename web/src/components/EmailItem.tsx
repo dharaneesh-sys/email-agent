@@ -270,7 +270,7 @@ export const EmailItem = memo(function EmailItem({
         >
           <ReplyIcon size={16} />
         </IconButton>
-        <div className="snooze-wrap" ref={snoozeRef} style={{ position: 'relative' }}>
+        <div className="snooze-wrap" ref={snoozeRef}>
           <IconButton
             size="sm"
             label="Snooze"
@@ -285,14 +285,13 @@ export const EmailItem = memo(function EmailItem({
             <ClockIcon size={16} />
           </IconButton>
           {snoozeOpen && (
-            <div role="menu" className="snooze-menu" style={{ position: 'absolute', right: 0, top: '100%', zIndex: 10, background: 'var(--surface-elevated)', border: '1px solid var(--border-default)', borderRadius: 8, padding: 4, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
+            <div role="menu" className="snooze-menu">
               {(['3h', 'tomorrow', 'nextWeek'] as const).map((d) => (
                 <button
                   key={d}
                   type="button"
                   role="menuitem"
                   className="snooze-option"
-                  style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13 }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setSnoozeOpen(false);

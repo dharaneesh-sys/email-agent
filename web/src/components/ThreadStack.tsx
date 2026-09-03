@@ -1,3 +1,4 @@
+// ThreadStack — tonal elevation: collapsed surface-secondary 0.92, open surface-elevated + amber-border + shadow-tinted, spine 1px border-subtle, 8px overlap
 import { useEffect, useMemo, useState } from 'react';
 import type { ThreadMessage } from '../types';
 import { api } from '../api';

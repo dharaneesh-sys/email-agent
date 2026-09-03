@@ -1,3 +1,4 @@
+// DetailPane — matte reading surface (surface-primary) + summary tinted glass (surface-elevated 92% + amber-2 8%, 1px amber-border, left 2px accent) — reading body stays matte, no glass
 import { useEffect, useMemo, useState } from 'react';
 import type { EmailAttachment, EmailListItem, SnoozeDuration, Tone } from '../types';
 import type { SummaryResponse, ThreadMessage } from '../types';
@@ -272,18 +273,18 @@ export function DetailPane({ email, accountId, drafting, onDraft, onBack, onRepl
                   {activeSnapshot?.date ? formatDate(new Date(activeSnapshot.date)) : ''}
                 </p>
               </div>
-              <div style={{ position: 'relative', marginLeft: 'auto' }}>
+              <div className="snooze-wrap" style={{ marginLeft: 'auto' }}>
                 <IconButton size="sm" label="Snooze" aria-haspopup="menu" aria-expanded={snoozeOpen} onClick={() => setSnoozeOpen((v) => !v)}>
                   <ClockIcon size={18} />
                 </IconButton>
                 {snoozeOpen && (
-                  <div role="menu" style={{ position: 'absolute', right: 0, top: '100%', zIndex: 10, background: 'var(--surface, #1e1e1e)', border: '1px solid var(--border, #333)', borderRadius: 8, padding: 4, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
+                  <div role="menu" className="snooze-menu">
                     {(['3h', 'tomorrow', 'nextWeek'] as const).map((d) => (
                       <button
                         key={d}
                         type="button"
                         role="menuitem"
-                        style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13 }}
+                        className="snooze-option"
                         onClick={() => {
                           setSnoozeOpen(false);
                           if (onSnooze && email) onSnooze(email, d);
