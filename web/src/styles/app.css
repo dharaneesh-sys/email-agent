@@ -328,16 +328,6 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-  position: absolute;
-  inset-inline-end: var(--space-2);
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-sm);
-  background: var(--surface-hover);
-  color: var(--text-tertiary);
-  font-family: var(--font-mono);
-  font-size: var(--text-overline);
-}
 
 /* ============ NavRail (§5) ============ */
 

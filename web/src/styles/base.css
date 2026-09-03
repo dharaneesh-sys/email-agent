@@ -90,6 +90,8 @@ kbd {
 }
 
 /* Visually hidden but available to screen readers */
+.sr-only,
+.visually-hidden {
   position: absolute;
   inline-size: 1px;
   block-size: 1px;

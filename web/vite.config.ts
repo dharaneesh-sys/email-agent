@@ -1,10 +1,10 @@
-import { defineConfig, splitVendorChunkPlugin } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 // Server runs on 3030 (Hono). Dev proxy forwards API calls there so the
 // SPA works against the live backend during development.
 export default defineConfig({
-  plugins: [react(), splitVendorChunkPlugin()],
+  plugins: [react()],
   server: {
     port: 5173,
     proxy: {
@@ -23,7 +23,7 @@ export default defineConfig({
         manualChunks(id: string) {
           if (id.includes('node_modules')) {
             if (id.includes('@tanstack/react-virtual')) return 'virtual';
-            if (id.includes('react')) return 'react';
+            if (id.includes('react') || id.includes('motion') || id.includes('@phosphor')) return 'react';
             return 'vendor';
           }
           return undefined;

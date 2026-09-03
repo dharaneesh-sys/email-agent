@@ -50,10 +50,10 @@ const waitForEmails = async () => {
   await q('article.email-item').first().waitFor({ timeout: 20000 });
   await page.waitForTimeout(500);
 };
-const rowClass = (i: number) => q('article.email-item').nth(i).getAttribute('class') ?? '';
-const starLabel = (i: number) =>
-  q('article.email-item').nth(i).locator('button[aria-label="Star"], button[aria-label="Unstar"]').first()
-    .getAttribute('aria-label').catch(() => '') ?? '';
+const rowClass = async (i: number) => (await q('article.email-item').nth(i).getAttribute('class').catch(() => null)) ?? '';
+const starLabel = async (i: number) =>
+  (await q('article.email-item').nth(i).locator('button[aria-label="Star"], button[aria-label="Unstar"]').first()
+    .getAttribute('aria-label').catch(() => null)) ?? '';
 
 try {
   await page.goto('http://localhost:3030/', { waitUntil: 'networkidle' });
